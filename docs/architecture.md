@@ -1,4 +1,4 @@
-# Conversion Tool — Architecture
+# Waffleiron — Architecture
 
 ## Overview
 
@@ -164,24 +164,24 @@ output/
 
 ```bash
 # Basic conversion
-asm-to-xc convert policy.xml --namespace my-ns --output ./output/
+waffleiron convert policy.xml --namespace my-ns --output ./output/
 
 # With bulk alarm-only decisions
-asm-to-xc convert policy.xml \
+waffleiron convert policy.xml \
   --namespace my-ns \
   --alarm-only-signatures=exclude \
   --alarm-only-violations=disable
 
 # With a decisions file from a previous run
-asm-to-xc convert policy.xml \
+waffleiron convert policy.xml \
   --namespace my-ns \
   --decisions decisions.yaml
 
 # Dry run (gap report only, no XC configs)
-asm-to-xc analyze policy.xml
+waffleiron analyze policy.xml
 
 # Validate output against XC API schemas
-asm-to-xc validate ./output/
+waffleiron validate ./output/
 ```
 
 ## Validation

@@ -1,4 +1,4 @@
-# ASM-to-XC Policy Conversion — Research & Analysis
+# Waffleiron — Research & Analysis
 
 Reference documentation for building an automated tool that translates BIG-IP ASM/Advanced WAF XML policy exports into F5 Distributed Cloud (XC) WAF configurations.
 

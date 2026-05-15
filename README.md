@@ -1,4 +1,4 @@
-# asm-to-xc
+# waffleiron
 
 Convert BIG-IP ASM/Advanced WAF XML policy exports to F5 Distributed Cloud (XC) WAF configurations.
 
