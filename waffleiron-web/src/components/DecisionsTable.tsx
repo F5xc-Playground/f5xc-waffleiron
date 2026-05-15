@@ -117,19 +117,23 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
 
   const updateRowAction = useCallback((id: string, newAction: string) => {
     setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, action: newAction as Row['action'] } : r)),
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        if (r.kind === 'signature') return { ...r, action: newAction as SignatureAction };
+        return { ...r, action: newAction as ViolationAction };
+      }),
     );
   }, []);
 
   const bulkSetSignatures = useCallback((action: SignatureAction) => {
     setRows((prev) =>
-      prev.map((r) => (r.kind === 'signature' ? { ...r, action } : r)),
+      prev.map((r): Row => (r.kind === 'signature' ? { ...r, action } : r)),
     );
   }, []);
 
   const bulkSetViolations = useCallback((action: ViolationAction) => {
     setRows((prev) =>
-      prev.map((r) => (r.kind === 'violation' ? { ...r, action } : r)),
+      prev.map((r): Row => (r.kind === 'violation' ? { ...r, action } : r)),
     );
   }, []);
 
