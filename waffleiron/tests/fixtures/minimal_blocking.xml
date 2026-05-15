@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policy>
+    <fullPath>/Common/test-policy</fullPath>
+    <enforcementMode>blocking</enforcementMode>
+    <encoding>utf-8</encoding>
+    <signatureSettings>
+        <signatureStaging>true</signatureStaging>
+        <placeholderSignaturesSettings>
+            <placeholderSignatureSetting>
+                <accuracyFilter>ge</accuracyFilter>
+                <accuracyValue>medium</accuracyValue>
+            </placeholderSignatureSetting>
+        </placeholderSignaturesSettings>
+    </signatureSettings>
+    <signatures>
+        <signature>
+            <signatureId>200001001</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>true</block>
+        </signature>
+    </signatures>
+    <violations>
+        <violation>
+            <name>VIOL_ATTACK_SIGNATURE</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+    </violations>
+    <urls></urls>
+    <parameters></parameters>
+    <filetypes></filetypes>
+    <cookies></cookies>
+    <headers></headers>
+    <methods></methods>
+    <whitelist-ips></whitelist-ips>
+</policy>

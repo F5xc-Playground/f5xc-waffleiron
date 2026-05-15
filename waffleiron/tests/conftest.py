@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from waffleiron.model import (
@@ -15,6 +17,11 @@ from waffleiron.model import (
     BlockingPageConfig,
     SignatureConfig,
 )
+
+
+@pytest.fixture
+def fixtures_path():
+    return Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
