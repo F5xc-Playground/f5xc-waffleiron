@@ -185,11 +185,12 @@ async def translate_conversion(request: Request, conversion_id: str):
     session = _get_session(request, conversion_id)
     body = await request.json()
     namespace = body.get("namespace", "default")
+    name_override = body.get("name")
 
     if session.asm_policy is None:
         raise HTTPException(status_code=400, detail="No policy parsed yet")
 
-    result = translate(session.asm_policy, session.decisions, namespace)
+    result = translate(session.asm_policy, session.decisions, namespace, name_override)
     session.translation = result
     session.status = "translated"
 

@@ -196,12 +196,13 @@ class ServicePolicyTranslator:
     """
 
     @staticmethod
-    def translate(policy: AsmPolicy, namespace: str) -> dict | None:
+    def translate(policy: AsmPolicy, namespace: str, name_override: str | None = None) -> dict | None:
         """Build the XC service_policy JSON object.
 
         Args:
             policy: Populated AsmPolicy intermediate model.
             namespace: Target F5 XC namespace.
+            name_override: Optional name to use instead of policy.name.
 
         Returns:
             A dict matching the XC service_policy CreateSpec JSON structure,
@@ -263,7 +264,7 @@ class ServicePolicyTranslator:
         if not rules:
             return None
 
-        policy_name = sanitize_xc_name(policy.name) + "-service-policy"
+        policy_name = sanitize_xc_name(name_override or policy.name) + "-service-policy"
         # Truncate to 64 chars safely
         policy_name = policy_name[:64].rstrip("-")
 

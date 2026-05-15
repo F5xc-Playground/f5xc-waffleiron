@@ -30,12 +30,13 @@ class AppFirewallTranslator:
     """Translates an AsmPolicy intermediate model to an XC app_firewall CreateSpec."""
 
     @staticmethod
-    def translate(policy: AsmPolicy, namespace: str) -> dict:
+    def translate(policy: AsmPolicy, namespace: str, name_override: str | None = None) -> dict:
         """Return the XC app_firewall CreateSpec as a Python dict.
 
         Args:
             policy: Populated AsmPolicy intermediate model.
             namespace: Target F5 XC namespace.
+            name_override: Optional name to use instead of policy.name.
 
         Returns:
             A dict matching the XC app_firewall CreateSpec JSON structure.
@@ -69,7 +70,7 @@ class AppFirewallTranslator:
 
         return {
             "metadata": {
-                "name": sanitize_xc_name(policy.name),
+                "name": sanitize_xc_name(name_override or policy.name),
                 "namespace": namespace,
             },
             "spec": spec,

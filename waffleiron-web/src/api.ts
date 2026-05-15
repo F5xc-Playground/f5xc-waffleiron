@@ -33,11 +33,13 @@ export async function submitDecisions(id: string, decisions: DecisionRequest): P
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function runTranslation(id: string, namespace: string): Promise<TranslationOutputs> {
+export async function runTranslation(id: string, namespace: string, name?: string): Promise<TranslationOutputs> {
+  const body: Record<string, string> = { namespace };
+  if (name) body.name = name;
   const res = await fetch(`${BASE}/conversions/${id}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ namespace }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
