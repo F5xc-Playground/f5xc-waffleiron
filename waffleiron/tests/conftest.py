@@ -390,3 +390,43 @@ def make_policy_with_cookie_sig_override(cookie_name, sig_id):
             ]
         ),
     )
+
+
+def make_policy_with_ip_intelligence(categories):
+    """Policy with IP intelligence categories.
+
+    Args:
+        categories: list of category name strings (e.g. ["botnets", "scanners"])
+    """
+    from waffleiron.model import IpIntelCategory, IpIntelligenceConfig
+
+    intel_cats = [IpIntelCategory(name=cat, action="block") for cat in categories]
+    return make_minimal_policy(
+        ip_intelligence=IpIntelligenceConfig(categories=intel_cats)
+    )
+
+
+def make_policy_with_csrf(enabled=True, urls=None):
+    """Policy with CSRF protection enabled."""
+    return make_minimal_policy(
+        csrf=CsrfConfig(enabled=enabled, urls=urls if urls is not None else []),
+    )
+
+
+def make_policy_with_data_guard(
+    enabled=True,
+    credit_cards=False,
+    ssn=False,
+    custom_patterns=None,
+    exception_urls=None,
+):
+    """Policy with Data Guard enabled."""
+    return make_minimal_policy(
+        data_guard=DataGuardConfig(
+            enabled=enabled,
+            credit_cards=credit_cards,
+            ssn=ssn,
+            custom_patterns=custom_patterns if custom_patterns is not None else [],
+            exception_urls=exception_urls if exception_urls is not None else [],
+        ),
+    )
