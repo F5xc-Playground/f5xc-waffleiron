@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 from waffleiron.model import AccuracyLevel, AsmPolicy, EnforcementMode
 from waffleiron.translators.mappings import (
     ASM_BOT_CATEGORY_TO_XC,
@@ -11,26 +9,13 @@ from waffleiron.translators.mappings import (
     ASM_VIOLATION_TO_XC_VIOLATIONS,
     translate_blocking_page_vars,
 )
+from waffleiron.translators.utils import sanitize_xc_name
 
-# ---------------------------------------------------------------------------
-# Bot action translation
-# ---------------------------------------------------------------------------
 _BOT_ACTION_MAP: dict[str, str] = {
     "block": "BLOCK",
     "report": "REPORT",
     "ignore": "IGNORE",
 }
-
-
-def _sanitize_name(name: str) -> str:
-    """Sanitize an ASM policy name for XC: lowercase, alphanumeric + hyphens, max 64 chars."""
-    lowered = name.lower()
-    sanitized = re.sub(r"[^a-z0-9-]+", "-", lowered)
-    sanitized = re.sub(r"-{2,}", "-", sanitized)
-    sanitized = sanitized.strip("-")[:64].strip("-")
-    if not sanitized:
-        raise ValueError(f"Policy name {name!r} produces an empty XC resource name after sanitization")
-    return sanitized
 
 
 class AppFirewallTranslator:
@@ -76,7 +61,7 @@ class AppFirewallTranslator:
 
         return {
             "metadata": {
-                "name": _sanitize_name(policy.name),
+                "name": sanitize_xc_name(policy.name),
                 "namespace": namespace,
             },
             "spec": spec,

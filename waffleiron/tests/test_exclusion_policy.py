@@ -1,7 +1,5 @@
 """Tests for the ExclusionPolicyTranslator."""
 
-import pytest
-
 from waffleiron.translators.exclusion_policy import ExclusionPolicyTranslator
 from waffleiron.decisions import AlarmOnlyAction, DecisionSet, SignatureDecision
 from waffleiron.model import (

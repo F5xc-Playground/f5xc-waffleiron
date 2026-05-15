@@ -309,7 +309,7 @@ def make_policy_with_n_overrides(n):
     )
 
 
-def make_policy_with_disabled_sig(sig_id, scope="global"):
+def make_policy_with_disabled_sig(sig_id):
     """Policy with a globally disabled signature (enabled=False)."""
     return make_minimal_policy(
         signatures=SignatureConfig(

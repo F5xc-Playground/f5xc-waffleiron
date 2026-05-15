@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 from typing import NamedTuple
 
 from waffleiron.decisions import AlarmOnlyAction, DecisionSet
 from waffleiron.model import AsmPolicy
+from waffleiron.translators.utils import path_slug, sanitize_xc_name
 
-# Maximum number of signature contexts per exclusion rule (XC limit).
 _MAX_CONTEXTS_PER_RULE = 1024
-
-
-# ---------------------------------------------------------------------------
-# Internal grouping key
-# ---------------------------------------------------------------------------
 
 
 class _GroupKey(NamedTuple):
@@ -23,31 +17,8 @@ class _GroupKey(NamedTuple):
 
     path_type: str          # "any_path" or "path_prefix"
     path_value: str         # "" for any_path, the URL path for path_prefix
-    context: str            # CONTEXT_ANY | CONTEXT_PARAMETER | CONTEXT_COOKIE | CONTEXT_HEADER
+    context: str            # CONTEXT_ANY | CONTEXT_PARAMETER | CONTEXT_COOKIE
     context_name: str       # "" for CONTEXT_ANY, entity name otherwise
-
-
-# ---------------------------------------------------------------------------
-# Name sanitization helpers
-# ---------------------------------------------------------------------------
-
-
-def _sanitize_name(name: str) -> str:
-    """Sanitize a name for XC: lowercase, alphanumeric + hyphens, max 64 chars."""
-    lowered = name.lower()
-    sanitized = re.sub(r"[^a-z0-9-]+", "-", lowered)
-    sanitized = re.sub(r"-{2,}", "-", sanitized)
-    sanitized = sanitized.strip("-")[:64].strip("-")
-    if not sanitized:
-        raise ValueError(f"Name {name!r} produces an empty XC resource name after sanitization")
-    return sanitized
-
-
-def _path_slug(path: str) -> str:
-    """Convert a URL path to a kebab-case slug suitable for rule names."""
-    slug = re.sub(r"[^a-z0-9]+", "-", path.lower())
-    slug = slug.strip("-")
-    return slug or "root"
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +59,7 @@ class ExclusionPolicyTranslator:
             # 2a. Whole-URL WAF skip
             if url.attack_signatures_check is False:
                 if url.name not in skip_rules:
-                    slug = _path_slug(url.name)
+                    slug = path_slug(url.name)
                     skip_rules[url.name] = {
                         "metadata": {"name": f"skip-{slug}"},
                         "any_domain": {},
@@ -138,7 +109,7 @@ class ExclusionPolicyTranslator:
         # Add skip-processing rules
         exclusion_rules.extend(skip_rules.values())
 
-        policy_name = _sanitize_name(policy.name) + "-exclusions"
+        policy_name = sanitize_xc_name(policy.name) + "-exclusions"
         # Truncate the suffix-appended name to 64 chars
         policy_name = policy_name[:64].rstrip("-")
 
@@ -178,16 +149,14 @@ class ExclusionPolicyTranslator:
             if key.context == "CONTEXT_ANY":
                 rule_name = f"excl-global-sig-{sig_label}"
             elif key.context == "CONTEXT_PARAMETER":
-                rule_name = f"excl-param-{_path_slug(key.context_name)}-sig-{sig_label}"
+                rule_name = f"excl-param-{path_slug(key.context_name)}-sig-{sig_label}"
             elif key.context == "CONTEXT_COOKIE":
-                rule_name = f"excl-cookie-{_path_slug(key.context_name)}-sig-{sig_label}"
-            elif key.context == "CONTEXT_HEADER":
-                rule_name = f"excl-header-{_path_slug(key.context_name)}-sig-{sig_label}"
+                rule_name = f"excl-cookie-{path_slug(key.context_name)}-sig-{sig_label}"
             else:
                 rule_name = f"excl-sig-{sig_label}"
         else:
             # path_prefix scoped
-            slug = _path_slug(key.path_value)
+            slug = path_slug(key.path_value)
             rule_name = f"excl-url-{slug}-sig-{sig_label}"
 
         # Truncate to 64 chars safely
