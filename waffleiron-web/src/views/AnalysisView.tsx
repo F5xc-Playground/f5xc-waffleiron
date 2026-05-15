@@ -1,13 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
+import PolicyInfoCard from '../components/PolicyInfoCard';
 import SummaryCards from '../components/SummaryCards';
 import DecisionsTable from '../components/DecisionsTable';
+import TranslatedWithLossPanel from '../components/TranslatedWithLossPanel';
+import UntranslatablePanel from '../components/UntranslatablePanel';
 import { submitDecisions, runTranslation } from '../api';
 import { useConversion } from '../context/ConversionContext';
 import type { DecisionRequest } from '../types';
 
 export default function AnalysisView() {
   const { state, dispatch } = useConversion();
-  const [namespace, setNamespace] = useState('');
+  const [namespace, setNamespace] = useState('default');
   const [translating, setTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const decisionsRef = useRef<DecisionRequest>({
@@ -58,6 +61,9 @@ export default function AnalysisView() {
   return (
     <div className="flex-1 px-6 py-4">
       <div className="mx-auto max-w-5xl space-y-6">
+        {/* Policy Info */}
+        <PolicyInfoCard info={analysis.policy_info} botGaps={analysis.bot_gaps} />
+
         {/* Summary */}
         <SummaryCards summary={analysis.summary} />
 
@@ -72,6 +78,20 @@ export default function AnalysisView() {
             onDecisionsChange={handleDecisionsChange}
           />
         </div>
+
+        {/* Translated with Loss */}
+        <TranslatedWithLossPanel
+          untranslatable={analysis.untranslatable}
+          warnings={analysis.warnings}
+        />
+
+        {/* Cannot Translate */}
+        {analysis.summary.cannot_translate > 0 && (
+          <UntranslatablePanel
+            untranslatable={analysis.untranslatable}
+            botGaps={analysis.bot_gaps}
+          />
+        )}
 
         {/* Namespace + Translate */}
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">

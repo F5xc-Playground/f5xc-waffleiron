@@ -67,7 +67,7 @@ class TestValidOutput:
 
     def test_valid_app_firewall_with_response_codes(self):
         obj = minimal_app_firewall()
-        obj["spec"]["allowed_response_codes"] = {"response_codes": list(range(200, 210))}
+        obj["spec"]["allowed_response_codes"] = {"response_code": list(range(200, 210))}
         result = validate(obj, "app_firewall")
         assert result.is_valid is True
 
@@ -224,15 +224,15 @@ class TestInvalidOutput:
 
     def test_too_many_response_codes(self):
         obj = minimal_app_firewall()
-        obj["spec"]["allowed_response_codes"] = {"response_codes": list(range(200, 250))}
+        obj["spec"]["allowed_response_codes"] = {"response_code": list(range(200, 250))}
         result = validate(obj, "app_firewall")
         assert result.is_valid is False
         paths = [e.path for e in result.errors]
-        assert "spec.allowed_response_codes.response_codes" in paths
+        assert "spec.allowed_response_codes.response_code" in paths
 
     def test_response_codes_exactly_48_is_valid(self):
         obj = minimal_app_firewall()
-        obj["spec"]["allowed_response_codes"] = {"response_codes": list(range(200, 248))}
+        obj["spec"]["allowed_response_codes"] = {"response_code": list(range(200, 248))}
         result = validate(obj, "app_firewall")
         assert result.is_valid is True
 

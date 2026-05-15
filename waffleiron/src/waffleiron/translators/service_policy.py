@@ -214,28 +214,33 @@ class ServicePolicyTranslator:
             cidr = _ip_to_cidr(entry.ip, entry.mask)
             rule = {
                 "metadata": {"name": _rule_name_for_ip(cidr)},
-                "action": "ALLOW",
-                "match": {
-                    "src_ip_prefix_list": {
-                        "prefixes": [cidr],
-                    }
+                "spec": {
+                    "action": "ALLOW",
+                    "any_client": {},
+                    "ip_prefix_list": {
+                        "ip_prefixes": [cidr],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
 
         # --- 2. Geo deny rules (from geolocation.disallowed) ---
+        geo_codes = []
         for country_name in policy.geolocation.disallowed:
             code = _COUNTRY_NAME_TO_CODE.get(country_name)
-            if code is None:
-                # Unknown country — skip silently
-                continue
+            if code is not None:
+                geo_codes.append(code)
+        if geo_codes:
+            codes_str = ", ".join(geo_codes)
             rule = {
-                "metadata": {"name": _rule_name_for_country(country_name)},
-                "action": "DENY",
-                "match": {
-                    "geo_ip": {
-                        "country_codes": [code],
-                    }
+                "metadata": {"name": sanitize_xc_name("deny-geo-blocked-countries")},
+                "spec": {
+                    "action": "DENY",
+                    "client_selector": {
+                        "expressions": [f"country in ({codes_str})"],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
@@ -244,11 +249,13 @@ class ServicePolicyTranslator:
         for category in policy.ip_intelligence.categories:
             rule = {
                 "metadata": {"name": _rule_name_for_threat(category.name)},
-                "action": "DENY",
-                "match": {
-                    "ip_threat_category": {
-                        "category": category.name,
-                    }
+                "spec": {
+                    "action": "DENY",
+                    "any_client": {},
+                    "ip_threat_category_list": {
+                        "ip_threat_categories": [category.name],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
@@ -266,6 +273,8 @@ class ServicePolicyTranslator:
                 "namespace": namespace,
             },
             "spec": {
-                "rules": rules,
+                "rule_list": {
+                    "rules": rules,
+                },
             },
         }

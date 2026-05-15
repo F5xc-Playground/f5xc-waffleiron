@@ -4,6 +4,7 @@ import { useConversion } from '../context/ConversionContext';
 import { getReport } from '../api';
 import JsonViewer from '../components/JsonViewer';
 import GapReport from '../components/GapReport';
+import PushModal from '../components/PushModal';
 import type { TranslationOutputs } from '../types';
 
 const OBJECT_TYPES = [
@@ -22,9 +23,10 @@ function getAvailableTabs(outputs: TranslationOutputs) {
 }
 
 export default function ReviewView() {
-  const { state, dispatch } = useConversion();
+  const { state } = useConversion();
   const [activeTab, setActiveTab] = useState<OutputKey | null>(null);
   const [zipping, setZipping] = useState(false);
+  const [showPushModal, setShowPushModal] = useState(false);
   const initializedRef = useRef(false);
 
   const outputs = state.outputs;
@@ -32,7 +34,6 @@ export default function ReviewView() {
 
   const tabs = outputs ? getAvailableTabs(outputs) : [];
 
-  // Set initial active tab once
   useEffect(() => {
     if (!initializedRef.current && tabs.length > 0) {
       setActiveTab(tabs[0].key);
@@ -51,7 +52,6 @@ export default function ReviewView() {
     try {
       const zip = new JSZip();
 
-      // Add each output JSON file
       for (const t of OBJECT_TYPES) {
         const data = outputs[t.key as keyof TranslationOutputs];
         if (data) {
@@ -59,12 +59,11 @@ export default function ReviewView() {
         }
       }
 
-      // Add gap report markdown
       try {
         const markdown = await getReport(sessionId, 'markdown');
         zip.file('gap_report.md', markdown);
       } catch {
-        // Gap report is optional — skip if unavailable
+        // Gap report is optional
       }
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -83,10 +82,6 @@ export default function ReviewView() {
     }
   }, [outputs, sessionId]);
 
-  const handlePush = useCallback(() => {
-    dispatch({ type: 'GO_TO_STEP', step: 'push' });
-  }, [dispatch]);
-
   if (!outputs || !sessionId) {
     return (
       <div className="flex-1 px-6 py-4">
@@ -99,52 +94,66 @@ export default function ReviewView() {
     );
   }
 
+  const hasPushResults = state.pushResults && state.pushResults.length > 0;
+  const allPushSucceeded = state.pushResults?.every((r) => r.success);
+
   return (
     <div className="flex-1 px-6 py-4">
       <div className="mx-auto max-w-5xl space-y-6">
-        {/* Export Toolbar */}
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-5 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleDownloadZip}
-              disabled={zipping}
-              className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            >
-              {zipping ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Creating ZIP...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download All (ZIP)
-                </>
-              )}
-            </button>
-          </div>
+        {/* Export Actions */}
+        <div className="grid grid-cols-2 gap-4">
           <button
             type="button"
-            onClick={handlePush}
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            onClick={handleDownloadZip}
+            disabled={zipping}
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-5 text-center shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-500 dark:hover:bg-gray-700"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Push to XC
+            {zipping ? (
+              <svg className="h-8 w-8 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-8 w-8 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {zipping ? 'Creating ZIP...' : 'Download JSON'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Export all objects as a ZIP archive
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPushModal(true)}
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-5 text-center shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+          >
+            {hasPushResults && allPushSucceeded ? (
+              <svg className="h-8 w-8 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="h-8 w-8 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            )}
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {hasPushResults && allPushSucceeded ? 'Pushed to XC' : 'Push to XC Tenant'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {hasPushResults && allPushSucceeded
+                ? 'Objects deployed — click to push again'
+                : 'Deploy objects directly to your tenant'}
+            </span>
           </button>
         </div>
 
         {/* Tabbed JSON Panels */}
         {tabs.length > 0 && (
           <div>
-            {/* Tab bar */}
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               {tabs.map((tab) => (
                 <button
@@ -162,7 +171,6 @@ export default function ReviewView() {
               ))}
             </div>
 
-            {/* Active tab content */}
             <div className="mt-3">
               {activeData && activeTab && (
                 <JsonViewer
@@ -177,6 +185,9 @@ export default function ReviewView() {
         {/* Gap Report */}
         <GapReport sessionId={sessionId} />
       </div>
+
+      {/* Push Modal */}
+      {showPushModal && <PushModal onClose={() => setShowPushModal(false)} />}
     </div>
   );
 }

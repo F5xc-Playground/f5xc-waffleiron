@@ -81,20 +81,20 @@ class TestSignatureSettings:
 
     def test_staging_enabled(self, minimal_policy):
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
-        staging = result["spec"]["detection_settings"]["signatures_staging_settings"]
-        assert "stage_new_and_updated_signatures" in staging
+        detection = result["spec"]["detection_settings"]
+        assert "stage_new_and_updated_signatures" in detection
 
     def test_staging_period_value(self, minimal_policy):
         minimal_policy.signatures.staging_period = 14
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
-        staging = result["spec"]["detection_settings"]["signatures_staging_settings"]
-        assert staging["stage_new_and_updated_signatures"]["staging_period"] == 14
+        detection = result["spec"]["detection_settings"]
+        assert detection["stage_new_and_updated_signatures"]["staging_period"] == 14
 
     def test_staging_disabled(self, minimal_policy):
         minimal_policy.signatures.staging_enabled = False
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
-        staging = result["spec"]["detection_settings"]["signatures_staging_settings"]
-        assert "disable_staging" in staging
+        detection = result["spec"]["detection_settings"]
+        assert "disable_staging" in detection
 
     def test_default_attack_type_settings_when_no_disabled_sets(self, minimal_policy):
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
@@ -135,44 +135,44 @@ class TestSignatureSettings:
 class TestViolationSettings:
     def test_default_violation_settings_when_no_disabled_violations(self, minimal_policy):
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
-        assert "default_violation_settings" in vsettings
+        detection = result["spec"]["detection_settings"]
+        assert "default_violation_settings" in detection
 
     def test_disabled_violations(self):
         policy = make_policy_with_disabled_violation("VIOL_ENCODING")
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
-        disabled = vsettings["disabled_violation_types"]
+        detection = result["spec"]["detection_settings"]
+        disabled = detection["disabled_violation_types"]
         assert "VIOL_ENCODING" in disabled
 
     def test_alarm_only_violation_not_disabled(self, mature_policy):
         # mature_policy has VIOL_COOKIE_MODIFIED as alarm=True, block=False — NOT disabled
         result = AppFirewallTranslator.translate(mature_policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
+        detection = result["spec"]["detection_settings"]
         # Should be default since no violations are fully disabled (alarm=False, block=False)
-        assert "default_violation_settings" in vsettings
+        assert "default_violation_settings" in detection
 
     def test_evasion_split(self):
         policy = make_policy_with_disabled_violation("VIOL_EVASION")
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
-        disabled = vsettings["disabled_violation_types"]
+        detection = result["spec"]["detection_settings"]
+        disabled = detection["disabled_violation_types"]
         evasion_subtypes = [v for v in disabled if v.startswith("VIOL_EVASION_")]
         assert len(evasion_subtypes) == 8
 
     def test_http_protocol_split(self):
         policy = make_policy_with_disabled_violation("VIOL_HTTP_PROTOCOL")
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
-        disabled = vsettings["disabled_violation_types"]
+        detection = result["spec"]["detection_settings"]
+        disabled = detection["disabled_violation_types"]
         http_subtypes = [v for v in disabled if v.startswith("VIOL_HTTP_PROTOCOL_")]
         assert len(http_subtypes) == 10
 
     def test_violation_xml_format_remapped(self):
         policy = make_policy_with_disabled_violation("VIOL_XML_FORMAT")
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        vsettings = result["spec"]["detection_settings"]["violation_settings"]
-        disabled = vsettings["disabled_violation_types"]
+        detection = result["spec"]["detection_settings"]
+        disabled = detection["disabled_violation_types"]
         assert "VIOL_XML_MALFORMED" in disabled
 
 
@@ -228,13 +228,13 @@ class TestBlockingPage:
     def test_custom_page_variable_translated(self, mature_policy):
         result = AppFirewallTranslator.translate(mature_policy, namespace="ns")
         page = result["spec"]["blocking_page"]
-        assert "{{request_id}}" in page["blocking_page"]
-        assert "<%TS.request.ID()%>" not in page["blocking_page"]
+        assert "{{request_id}}" in page["blocking_page_body"]
+        assert "<%TS.request.ID()%>" not in page["blocking_page_body"]
 
     def test_custom_page_response_code(self, mature_policy):
         result = AppFirewallTranslator.translate(mature_policy, namespace="ns")
         page = result["spec"]["blocking_page"]
-        assert page["response_code"] == 403
+        assert page["response_code"] == "Forbidden"
 
 
 class TestAnonymization:
@@ -281,7 +281,7 @@ class TestResponseCodes:
     def test_allowed_response_codes(self, minimal_policy):
         minimal_policy.allowed_response_codes = [200, 301, 404]
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
-        codes = result["spec"]["allowed_response_codes"]["response_codes"]
+        codes = result["spec"]["allowed_response_codes"]["response_code"]
         assert 200 in codes
         assert 301 in codes
         assert 404 in codes

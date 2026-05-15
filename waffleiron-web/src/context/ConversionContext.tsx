@@ -7,7 +7,7 @@ import type {
   XCStatus,
 } from '../types';
 
-export type WizardStep = 'upload' | 'analysis' | 'review' | 'push';
+export type WizardStep = 'upload' | 'analysis' | 'review';
 
 export interface ConversionState {
   step: WizardStep;
@@ -61,7 +61,6 @@ function conversionReducer(state: ConversionState, action: ConversionAction): Co
     case 'PUSH_COMPLETE':
       return {
         ...state,
-        step: 'push',
         pushResults: action.results,
       };
     case 'XC_STATUS_LOADED':
