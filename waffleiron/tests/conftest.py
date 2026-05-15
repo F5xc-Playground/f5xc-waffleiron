@@ -24,6 +24,7 @@ from waffleiron.model import (
     SessionTrackingConfig,
     SignatureConfig,
     SignatureOverride,
+    SignatureSet,
     UrlEntity,
     Violation,
 )
@@ -179,6 +180,66 @@ def positive_security_policy():
             CustomSignature(id=300000001, name="Custom SQL", pattern=r"/union\s+select/i", scope="/api/*"),
             CustomSignature(id=300000002, name="Header Inject", pattern=r"/X-Internal/", scope="global"),
         ],
+    )
+
+
+def make_policy_with_disabled_sig_set(set_name: str):
+    """Create a policy with one disabled SignatureSet (enabled=False)."""
+    return AsmPolicy(
+        name="sig-set-test",
+        enforcement_mode=EnforcementMode.BLOCKING,
+        encoding="utf-8",
+        signatures=SignatureConfig(
+            global_overrides=[],
+            accuracy_level=AccuracyLevel.HIGH_MEDIUM,
+            staging_enabled=True,
+            staging_period=7,
+            threat_campaigns_enabled=True,
+        ),
+        signature_sets=[SignatureSet(name=set_name, enabled=False)],
+        entities=EntityCollection(),
+        violations=[],
+        whitelist_ips=[],
+        geolocation=GeolocationConfig(),
+        csrf=CsrfConfig(),
+        data_guard=DataGuardConfig(),
+        brute_force=BruteForceConfig(),
+        session_tracking=SessionTrackingConfig(),
+        bot_defense=BotDefenseConfig(),
+        ip_intelligence=IpIntelligenceConfig(),
+        blocking_page=BlockingPageConfig(),
+        allowed_response_codes=[],
+        custom_signatures=[],
+    )
+
+
+def make_policy_with_disabled_violation(violation_name: str):
+    """Create a policy with one Violation where alarm=False, block=False (disabled)."""
+    return AsmPolicy(
+        name="violation-test",
+        enforcement_mode=EnforcementMode.BLOCKING,
+        encoding="utf-8",
+        signatures=SignatureConfig(
+            global_overrides=[],
+            accuracy_level=AccuracyLevel.HIGH_MEDIUM,
+            staging_enabled=True,
+            staging_period=7,
+            threat_campaigns_enabled=True,
+        ),
+        signature_sets=[],
+        entities=EntityCollection(),
+        violations=[Violation(name=violation_name, alarm=False, block=False)],
+        whitelist_ips=[],
+        geolocation=GeolocationConfig(),
+        csrf=CsrfConfig(),
+        data_guard=DataGuardConfig(),
+        brute_force=BruteForceConfig(),
+        session_tracking=SessionTrackingConfig(),
+        bot_defense=BotDefenseConfig(),
+        ip_intelligence=IpIntelligenceConfig(),
+        blocking_page=BlockingPageConfig(),
+        allowed_response_codes=[],
+        custom_signatures=[],
     )
 
 
