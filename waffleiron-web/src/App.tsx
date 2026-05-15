@@ -1,4 +1,5 @@
 import { ConversionProvider, useConversion, type WizardStep } from './context/ConversionContext';
+import UploadView from './views/UploadView';
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: 'Upload' },
@@ -64,16 +65,21 @@ function WizardSteps() {
 function CurrentView() {
   const { state } = useConversion();
 
-  return (
-    <div className="flex-1 px-6 py-4">
-      <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
-        <p className="text-gray-500 dark:text-gray-400">
-          Step: <span className="font-semibold capitalize">{state.step}</span>
-          {' '} — view not yet implemented
-        </p>
-      </div>
-    </div>
-  );
+  switch (state.step) {
+    case 'upload':
+      return <UploadView />;
+    default:
+      return (
+        <div className="flex-1 px-6 py-4">
+          <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
+            <p className="text-gray-500 dark:text-gray-400">
+              Step: <span className="font-semibold capitalize">{state.step}</span>
+              {' '} — view not yet implemented
+            </p>
+          </div>
+        </div>
+      );
+  }
 }
 
 function AppContent() {
