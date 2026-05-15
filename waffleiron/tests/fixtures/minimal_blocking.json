@@ -1,0 +1,25 @@
+{
+    "policy": {
+        "fullPath": "/Common/test-policy",
+        "enforcementMode": "blocking",
+        "encoding": "utf-8",
+        "signatureSettings": {
+            "signatureStaging": true
+        },
+        "signatures": [
+            {
+                "signatureId": 200001001,
+                "enabled": true,
+                "alarm": true,
+                "block": true
+            }
+        ],
+        "violations": [
+            {
+                "name": "VIOL_ATTACK_SIGNATURE",
+                "alarm": true,
+                "block": true
+            }
+        ]
+    }
+}

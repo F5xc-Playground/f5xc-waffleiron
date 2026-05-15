@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policy>
+    <fullPath>/Common/rapid-deployment</fullPath>
+    <enforcementMode>blocking</enforcementMode>
+    <encoding>utf-8</encoding>
+    <signatureSettings>
+        <signatureStaging>true</signatureStaging>
+        <stagingPeriod>7</stagingPeriod>
+        <placeholderSignaturesSettings>
+            <placeholderSignatureSetting>
+                <accuracyFilter>ge</accuracyFilter>
+                <accuracyValue>medium</accuracyValue>
+            </placeholderSignatureSetting>
+        </placeholderSignaturesSettings>
+        <threatCampaigns>true</threatCampaigns>
+    </signatureSettings>
+    <signature-sets>
+        <signature-set>
+            <name>Generic Detection Signatures</name>
+            <enabled>true</enabled>
+        </signature-set>
+        <signature-set>
+            <name>High Accuracy Signatures</name>
+            <enabled>true</enabled>
+        </signature-set>
+    </signature-sets>
+    <signatures></signatures>
+    <violations>
+        <violation>
+            <name>VIOL_ATTACK_SIGNATURE</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_COOKIE_MODIFIED</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_DATA_GUARD</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_METHOD</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_FILETYPE</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+    </violations>
+    <urls></urls>
+    <parameters></parameters>
+    <filetypes></filetypes>
+    <cookies></cookies>
+    <headers></headers>
+    <methods></methods>
+    <whitelist-ips></whitelist-ips>
+</policy>
