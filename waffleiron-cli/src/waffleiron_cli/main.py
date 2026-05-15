@@ -19,7 +19,15 @@ from waffleiron import (
     translate,
     validate_outputs,
 )
-from waffleiron.decisions import AlarmOnlyAction, ViolationAction
+from waffleiron.analysis import AnalysisResult
+from waffleiron.decisions import (
+    AlarmOnlyAction,
+    BotDecision,
+    BotDecisionAction,
+    SignatureDecision,
+    ViolationAction,
+    ViolationDecision,
+)
 
 app = typer.Typer(
     name="waffleiron",
@@ -68,6 +76,15 @@ def convert(
     decisions: Optional[Path] = typer.Option(None, help="Path to decisions YAML file"),
 ) -> None:
     """Parse an ASM policy and produce XC WAF configuration files."""
+    valid_sig_actions = {"exclude", "enforce", "defer"}
+    valid_viol_actions = {"disable", "enforce", "defer"}
+    if alarm_only_signatures not in valid_sig_actions:
+        console.print(f"[red]Error:[/red] invalid --alarm-only-signatures value '{alarm_only_signatures}'. Must be one of: {', '.join(valid_sig_actions)}")
+        raise typer.Exit(code=1)
+    if alarm_only_violations not in valid_viol_actions:
+        console.print(f"[red]Error:[/red] invalid --alarm-only-violations value '{alarm_only_violations}'. Must be one of: {', '.join(valid_viol_actions)}")
+        raise typer.Exit(code=1)
+
     _check_file_exists(policy_file)
 
     policy = parse(policy_file)
@@ -79,6 +96,9 @@ def convert(
         decision_set = DecisionSet.load_yaml(decisions)
     else:
         decision_set = _build_decisions_from_analysis(analysis)
+
+    if decisions is not None and (alarm_only_signatures != "defer" or alarm_only_violations != "defer"):
+        console.print("[yellow]Warning:[/yellow] bulk overrides will be applied on top of the loaded decisions file.")
 
     # Apply bulk overrides (only when not "defer")
     if alarm_only_signatures in _SIG_ACTION_MAP:
@@ -253,15 +273,8 @@ def xc_status(
 # ---------------------------------------------------------------------------
 
 
-def _build_decisions_from_analysis(analysis) -> DecisionSet:
+def _build_decisions_from_analysis(analysis: AnalysisResult) -> DecisionSet:
     """Build a DecisionSet with DEFER defaults from analysis alarm-only items."""
-    from waffleiron.decisions import (
-        BotDecision,
-        BotDecisionAction,
-        SignatureDecision,
-        ViolationDecision,
-    )
-
     ds = DecisionSet()
 
     for sig in analysis.alarm_only_signatures:
