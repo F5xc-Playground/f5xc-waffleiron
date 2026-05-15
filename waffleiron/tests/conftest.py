@@ -243,6 +243,38 @@ def make_policy_with_disabled_violation(violation_name: str):
     )
 
 
+def make_minimal_policy(**overrides):
+    """Create a minimal policy with optional field overrides."""
+    defaults = dict(
+        name="test",
+        enforcement_mode=EnforcementMode.BLOCKING,
+        encoding="utf-8",
+        signatures=SignatureConfig(
+            global_overrides=[],
+            accuracy_level=AccuracyLevel.HIGH_MEDIUM,
+            staging_enabled=True,
+            staging_period=7,
+            threat_campaigns_enabled=True,
+        ),
+        signature_sets=[],
+        entities=EntityCollection(),
+        violations=[],
+        whitelist_ips=[],
+        geolocation=GeolocationConfig(),
+        csrf=CsrfConfig(),
+        data_guard=DataGuardConfig(),
+        brute_force=BruteForceConfig(),
+        session_tracking=SessionTrackingConfig(),
+        bot_defense=BotDefenseConfig(),
+        ip_intelligence=IpIntelligenceConfig(),
+        blocking_page=BlockingPageConfig(),
+        allowed_response_codes=[],
+        custom_signatures=[],
+    )
+    defaults.update(overrides)
+    return AsmPolicy(**defaults)
+
+
 def make_policy_with_n_overrides(n):
     """Create a policy with n alarm-only signature overrides."""
     overrides = [

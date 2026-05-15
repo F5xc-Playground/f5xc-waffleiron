@@ -25,13 +25,12 @@ _BOT_ACTION_MAP: dict[str, str] = {
 def _sanitize_name(name: str) -> str:
     """Sanitize an ASM policy name for XC: lowercase, alphanumeric + hyphens, max 64 chars."""
     lowered = name.lower()
-    # Replace anything that isn't alphanumeric or hyphen with a hyphen
     sanitized = re.sub(r"[^a-z0-9-]+", "-", lowered)
-    # Collapse consecutive hyphens
     sanitized = re.sub(r"-{2,}", "-", sanitized)
-    # Strip leading/trailing hyphens
-    sanitized = sanitized.strip("-")
-    return sanitized[:64]
+    sanitized = sanitized.strip("-")[:64].strip("-")
+    if not sanitized:
+        raise ValueError(f"Policy name {name!r} produces an empty XC resource name after sanitization")
+    return sanitized
 
 
 class AppFirewallTranslator:
@@ -162,9 +161,6 @@ class AppFirewallTranslator:
                 xc_list = ASM_VIOLATION_TO_XC_VIOLATIONS.get(violation.name)
                 if xc_list:
                     disabled_xc_violations.extend(xc_list)
-                else:
-                    # Unknown violation — include as-is
-                    disabled_xc_violations.append(violation.name)
 
         if disabled_xc_violations:
             return {"disabled_violation_types": disabled_xc_violations}

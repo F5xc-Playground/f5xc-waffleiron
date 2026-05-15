@@ -184,7 +184,7 @@ class IpWhitelistEntry:
 
     ip: str
     mask: str
-    block_requests: Optional[bool] = None
+    block_requests: Optional[str] = None
     never_log: Optional[bool] = None
     trusted_by_builder: Optional[bool] = None
     ignore_anomalies: Optional[bool] = None

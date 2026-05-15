@@ -5,8 +5,7 @@ import pytest
 from waffleiron.translators.app_firewall import AppFirewallTranslator
 from waffleiron.model import EnforcementMode, AccuracyLevel
 
-# Import helper functions from conftest (not fixtures — plain functions)
-from conftest import make_policy_with_disabled_sig_set, make_policy_with_disabled_violation
+from conftest import make_policy_with_disabled_sig_set, make_policy_with_disabled_violation, make_minimal_policy
 
 
 class TestMetadata:
@@ -27,6 +26,17 @@ class TestMetadata:
         minimal_policy.name = "a" * 100
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
         assert len(result["metadata"]["name"]) <= 64
+
+    def test_name_no_trailing_hyphen_after_truncation(self, minimal_policy):
+        minimal_policy.name = "a" * 63 + "-b"
+        result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
+        name = result["metadata"]["name"]
+        assert not name.endswith("-")
+
+    def test_name_empty_raises(self, minimal_policy):
+        minimal_policy.name = "___"
+        with pytest.raises(ValueError, match="empty XC resource name"):
+            AppFirewallTranslator.translate(minimal_policy, namespace="ns")
 
 
 class TestEnforcementMode:
@@ -61,12 +71,7 @@ class TestSignatureSettings:
         result = AppFirewallTranslator.translate(minimal_policy, namespace="ns")
         detection = result["spec"]["detection_settings"]
         sig_sel = detection["signature_selection_setting"]
-        # Should have accuracy-related key
-        assert (
-            "high_medium_accuracy_signatures" in sig_sel
-            or "only_high_accuracy_signatures" in sig_sel
-            or "high_medium_low_accuracy_signatures" in sig_sel
-        )
+        assert "high_medium_accuracy_signatures" in sig_sel
 
     def test_all_accuracy(self, minimal_policy):
         minimal_policy.signatures.accuracy_level = AccuracyLevel.ALL
@@ -118,32 +123,9 @@ class TestSignatureSettings:
         assert "default_attack_type_settings" in sig_sel
 
     def test_enabled_sig_set_not_disabled(self):
-        from waffleiron.model import AsmPolicy, SignatureSet, SignatureConfig, EntityCollection, EnforcementMode, AccuracyLevel, GeolocationConfig, CsrfConfig, DataGuardConfig, BruteForceConfig, SessionTrackingConfig, BotDefenseConfig, IpIntelligenceConfig, BlockingPageConfig
-        policy = AsmPolicy(
-            name="test",
-            enforcement_mode=EnforcementMode.BLOCKING,
-            encoding="utf-8",
-            signatures=SignatureConfig(
-                global_overrides=[],
-                accuracy_level=AccuracyLevel.HIGH_MEDIUM,
-                staging_enabled=True,
-                staging_period=7,
-                threat_campaigns_enabled=True,
-            ),
+        from waffleiron.model import SignatureSet
+        policy = make_minimal_policy(
             signature_sets=[SignatureSet(name="SQL Injection Signatures", enabled=True)],
-            entities=EntityCollection(),
-            violations=[],
-            whitelist_ips=[],
-            geolocation=GeolocationConfig(),
-            csrf=CsrfConfig(),
-            data_guard=DataGuardConfig(),
-            brute_force=BruteForceConfig(),
-            session_tracking=SessionTrackingConfig(),
-            bot_defense=BotDefenseConfig(),
-            ip_intelligence=IpIntelligenceConfig(),
-            blocking_page=BlockingPageConfig(),
-            allowed_response_codes=[],
-            custom_signatures=[],
         )
         result = AppFirewallTranslator.translate(policy, namespace="ns")
         sig_sel = result["spec"]["detection_settings"]["signature_selection_setting"]
@@ -271,73 +253,23 @@ class TestAnonymization:
         assert "session_id" in names
 
     def test_sensitive_cookies(self):
-        from waffleiron.model import AsmPolicy, SignatureConfig, EntityCollection, EnforcementMode, AccuracyLevel, GeolocationConfig, CsrfConfig, DataGuardConfig, BruteForceConfig, SessionTrackingConfig, BotDefenseConfig, IpIntelligenceConfig, BlockingPageConfig, CookieEntity
-        policy = AsmPolicy(
-            name="cookie-test",
-            enforcement_mode=EnforcementMode.BLOCKING,
-            encoding="utf-8",
-            signatures=SignatureConfig(
-                global_overrides=[],
-                accuracy_level=AccuracyLevel.HIGH_MEDIUM,
-                staging_enabled=True,
-                staging_period=7,
-                threat_campaigns_enabled=True,
-            ),
-            signature_sets=[],
+        from waffleiron.model import CookieEntity, EntityCollection
+        policy = make_minimal_policy(
             entities=EntityCollection(
                 cookies=[CookieEntity(name="auth_token", attack_signatures_check=True)],
             ),
-            violations=[],
-            whitelist_ips=[],
-            geolocation=GeolocationConfig(),
-            csrf=CsrfConfig(),
-            data_guard=DataGuardConfig(),
-            brute_force=BruteForceConfig(),
-            session_tracking=SessionTrackingConfig(),
-            bot_defense=BotDefenseConfig(),
-            ip_intelligence=IpIntelligenceConfig(),
-            blocking_page=BlockingPageConfig(),
-            allowed_response_codes=[],
-            custom_signatures=[],
         )
-        # Mark the cookie as sensitive (no direct sensitive field on CookieEntity, so we use a header)
-        # Actually cookies don't have sensitive field — test with header sensitive
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        # No sensitive cookies → default anonymization
         assert "default_anonymization" in result["spec"]
 
     def test_sensitive_headers(self):
-        from waffleiron.model import AsmPolicy, SignatureConfig, EntityCollection, EnforcementMode, AccuracyLevel, GeolocationConfig, CsrfConfig, DataGuardConfig, BruteForceConfig, SessionTrackingConfig, BotDefenseConfig, IpIntelligenceConfig, BlockingPageConfig, HeaderEntity
-        policy = AsmPolicy(
-            name="header-test",
-            enforcement_mode=EnforcementMode.BLOCKING,
-            encoding="utf-8",
-            signatures=SignatureConfig(
-                global_overrides=[],
-                accuracy_level=AccuracyLevel.HIGH_MEDIUM,
-                staging_enabled=True,
-                staging_period=7,
-                threat_campaigns_enabled=True,
-            ),
-            signature_sets=[],
+        from waffleiron.model import HeaderEntity, EntityCollection
+        policy = make_minimal_policy(
             entities=EntityCollection(
                 headers=[HeaderEntity(name="Authorization")],
             ),
-            violations=[],
-            whitelist_ips=[],
-            geolocation=GeolocationConfig(),
-            csrf=CsrfConfig(),
-            data_guard=DataGuardConfig(),
-            brute_force=BruteForceConfig(),
-            session_tracking=SessionTrackingConfig(),
-            bot_defense=BotDefenseConfig(),
-            ip_intelligence=IpIntelligenceConfig(),
-            blocking_page=BlockingPageConfig(),
-            allowed_response_codes=[],
-            custom_signatures=[],
         )
         result = AppFirewallTranslator.translate(policy, namespace="ns")
-        # No sensitive headers (no sensitive flag on HeaderEntity) → default
         assert "default_anonymization" in result["spec"]
 
 

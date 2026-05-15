@@ -39,7 +39,7 @@ class TestPositiveSecurityGaps:
 
 class TestLimitChecks:
     def test_warns_on_excessive_exclusions(self):
-        from tests.conftest import make_policy_with_n_overrides
+        from conftest import make_policy_with_n_overrides
 
         policy = make_policy_with_n_overrides(300)
         result = analyze(policy)
