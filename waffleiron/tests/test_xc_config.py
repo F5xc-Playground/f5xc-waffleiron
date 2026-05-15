@@ -78,6 +78,25 @@ class TestNotConfigured:
         config = XCConfig.from_env()
         assert config is None
 
+    def test_missing_tenant_url_raises(self, monkeypatch):
+        monkeypatch.delenv("F5XC_TENANT_URL", raising=False)
+        monkeypatch.setenv("F5XC_API_TOKEN", "some-token")
+        monkeypatch.delenv("F5XC_API_TOKEN_FILE", raising=False)
+        monkeypatch.delenv("F5XC_P12_PATH", raising=False)
+        monkeypatch.delenv("F5XC_P12_PASSWORD", raising=False)
+        with pytest.raises(ValueError, match="F5XC_TENANT_URL"):
+            XCConfig.from_env()
+
+    def test_explicit_token_file_missing_raises(self, monkeypatch, tmp_path):
+        nonexistent = tmp_path / "no-such-token"
+        monkeypatch.setenv("F5XC_TENANT_URL", "https://t.example.com")
+        monkeypatch.setenv("F5XC_API_TOKEN_FILE", str(nonexistent))
+        monkeypatch.delenv("F5XC_API_TOKEN", raising=False)
+        monkeypatch.delenv("F5XC_P12_PATH", raising=False)
+        monkeypatch.delenv("F5XC_P12_PASSWORD", raising=False)
+        with pytest.raises(FileNotFoundError):
+            XCConfig.from_env()
+
 
 class TestDefaultPaths:
     def test_default_p12_path(self, monkeypatch):

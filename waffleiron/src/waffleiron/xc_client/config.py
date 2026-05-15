@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 _DEFAULT_P12_PATH = "/certs/api-creds.p12"
 _DEFAULT_TOKEN_FILE = "/secrets/api-token"
@@ -17,12 +17,12 @@ class XCConfig:
 
     tenant_url: str
     auth_method: Literal["token", "p12"]
-    api_token: Optional[str] = None
-    p12_path: Optional[str] = None
-    p12_password: Optional[str] = None
+    api_token: str | None = None
+    p12_path: str | None = None
+    p12_password: str | None = None
 
     @classmethod
-    def from_env(cls) -> Optional["XCConfig"]:
+    def from_env(cls) -> XCConfig | None:
         """Resolve configuration from environment variables.
 
         Credential resolution order:
@@ -36,12 +36,16 @@ class XCConfig:
         tenant_url = os.environ.get("F5XC_TENANT_URL")
 
         # --- resolve token ---
-        token: Optional[str] = None
+        token: str | None = None
         token_file_path = os.environ.get("F5XC_API_TOKEN_FILE")
         if token_file_path:
             p = Path(token_file_path)
             if p.exists():
                 token = p.read_text().strip()
+            else:
+                raise FileNotFoundError(
+                    f"F5XC_API_TOKEN_FILE points to a non-existent file: {token_file_path}"
+                )
         elif Path(_DEFAULT_TOKEN_FILE).exists():
             token = Path(_DEFAULT_TOKEN_FILE).read_text().strip()
 
@@ -49,7 +53,7 @@ class XCConfig:
             token = os.environ.get("F5XC_API_TOKEN")
 
         # --- resolve p12 ---
-        p12_path_str: Optional[str] = None
+        p12_path_str: str | None = None
         p12_password = os.environ.get("F5XC_P12_PASSWORD")
         explicit_p12 = os.environ.get("F5XC_P12_PATH")
         if explicit_p12:
@@ -71,7 +75,7 @@ class XCConfig:
             )
 
         if not tenant_url:
-            return None
+            raise ValueError("F5XC_TENANT_URL is required when credentials are configured")
 
         if has_token:
             return cls(
