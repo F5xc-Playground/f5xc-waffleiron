@@ -1,5 +1,6 @@
 import { ConversionProvider, useConversion, type WizardStep } from './context/ConversionContext';
 import UploadView from './views/UploadView';
+import AnalysisView from './views/AnalysisView';
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: 'Upload' },
@@ -68,6 +69,8 @@ function CurrentView() {
   switch (state.step) {
     case 'upload':
       return <UploadView />;
+    case 'analysis':
+      return <AnalysisView />;
     default:
       return (
         <div className="flex-1 px-6 py-4">
