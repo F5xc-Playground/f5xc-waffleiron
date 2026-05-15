@@ -307,3 +307,86 @@ def make_policy_with_n_overrides(n):
         allowed_response_codes=[],
         custom_signatures=[],
     )
+
+
+def make_policy_with_disabled_sig(sig_id, scope="global"):
+    """Policy with a globally disabled signature (enabled=False)."""
+    return make_minimal_policy(
+        signatures=SignatureConfig(
+            global_overrides=[SignatureOverride(sig_id=sig_id, enabled=False, alarm=False, block=False)],
+            accuracy_level=AccuracyLevel.HIGH_MEDIUM,
+            staging_enabled=True,
+            staging_period=7,
+            threat_campaigns_enabled=True,
+        ),
+    )
+
+
+def make_policy_with_per_url_sig_override(url_path, sig_id):
+    """Policy with a URL that has a specific sig disabled."""
+    return make_minimal_policy(
+        entities=EntityCollection(
+            urls=[
+                UrlEntity(
+                    name=url_path,
+                    signature_overrides=[
+                        SignatureOverride(sig_id=sig_id, enabled=False, alarm=False, block=False),
+                    ],
+                )
+            ]
+        ),
+    )
+
+
+def make_policy_with_url_no_sig_check(url_path):
+    """Policy with a URL where attack_signatures_check=False."""
+    return make_minimal_policy(
+        entities=EntityCollection(
+            urls=[UrlEntity(name=url_path, attack_signatures_check=False)]
+        ),
+    )
+
+
+def make_policy_with_param_sig_override(param_name, sig_id):
+    """Policy with a parameter that has a specific sig disabled."""
+    return make_minimal_policy(
+        entities=EntityCollection(
+            parameters=[
+                ParameterEntity(
+                    name=param_name,
+                    signature_overrides=[
+                        SignatureOverride(sig_id=sig_id, enabled=False, alarm=False, block=False),
+                    ],
+                )
+            ]
+        ),
+    )
+
+
+def make_policy_with_alarm_only_sig(sig_id):
+    """Policy with a global alarm-only signature (alarm=True, block=False)."""
+    return make_minimal_policy(
+        signatures=SignatureConfig(
+            global_overrides=[SignatureOverride(sig_id=sig_id, enabled=True, alarm=True, block=False)],
+            accuracy_level=AccuracyLevel.HIGH_MEDIUM,
+            staging_enabled=True,
+            staging_period=7,
+            threat_campaigns_enabled=True,
+        ),
+    )
+
+
+def make_policy_with_cookie_sig_override(cookie_name, sig_id):
+    """Policy with a cookie that has a specific sig disabled."""
+    return make_minimal_policy(
+        entities=EntityCollection(
+            cookies=[
+                CookieEntity(
+                    name=cookie_name,
+                    signature_overrides=[
+                        SignatureOverride(sig_id=sig_id, enabled=False, alarm=False, block=False),
+                    ],
+                )
+            ]
+        ),
+    )
