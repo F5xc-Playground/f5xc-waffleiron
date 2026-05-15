@@ -2,6 +2,25 @@ from pathlib import Path
 
 import pytest
 
+from waffleiron.analysis import (
+    AlarmOnlySignature,
+    AlarmOnlyViolation,
+    AnalysisResult,
+    BotGap,
+    ConversionSummary,
+    LimitWarning,
+    PositiveSecuritySummary,
+    UntranslatableSummary,
+)
+from waffleiron.decisions import (
+    AlarmOnlyAction,
+    BotDecision,
+    BotDecisionAction,
+    DecisionSet,
+    SignatureDecision,
+    ViolationAction,
+    ViolationDecision,
+)
 from waffleiron.model import (
     AccuracyLevel,
     AsmPolicy,
@@ -430,3 +449,135 @@ def make_policy_with_data_guard(
             exception_urls=exception_urls if exception_urls is not None else [],
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures for reporter tests (Task 14)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def analysis_result():
+    """An AnalysisResult with a mix of alarm-only sigs, violations, bot gaps, etc."""
+    return AnalysisResult(
+        alarm_only_signatures=[
+            AlarmOnlySignature(sig_id=200001001, description="SQL Injection", scope="global"),
+            AlarmOnlySignature(sig_id=200001002, description="XSS", scope="url:/login"),
+        ],
+        alarm_only_violations=[
+            AlarmOnlyViolation(violation_name="VIOL_COOKIE_MODIFIED", alarm=True, block=False),
+        ],
+        positive_security=PositiveSecuritySummary(
+            url_count=3,
+            wildcard_url_count=1,
+            parameter_count=4,
+            constrained_parameter_count=2,
+            file_type_count=2,
+            cookie_count=1,
+            mandatory_header_count=1,
+        ),
+        untranslatable=UntranslatableSummary(
+            custom_signature_count=0,
+            session_tracking_enabled=True,
+            session_hijacking_enabled=False,
+            brute_force_enabled=True,
+            custom_signatures=[],
+        ),
+        bot_gaps=[
+            BotGap(
+                category="unknown-bot",
+                asm_action="challenge",
+                reason="XC WAF has no equivalent of 'challenge' for bot categories",
+            ),
+        ],
+        warnings=[
+            LimitWarning(
+                resource="exclusion_rules",
+                count=300,
+                limit=256,
+                message="Estimated exclusion rule count (300) exceeds XC WAF limit of 256.",
+            ),
+        ],
+        summary=ConversionSummary(
+            total=20,
+            directly_translated=14,
+            translated_with_loss=2,
+            decisions_required=3,
+            cannot_translate=1,
+        ),
+    )
+
+
+@pytest.fixture
+def analysis_with_custom_sigs():
+    """An AnalysisResult that includes custom signatures."""
+    return AnalysisResult(
+        alarm_only_signatures=[],
+        alarm_only_violations=[],
+        positive_security=PositiveSecuritySummary(),
+        untranslatable=UntranslatableSummary(
+            custom_signature_count=2,
+            session_tracking_enabled=False,
+            session_hijacking_enabled=False,
+            brute_force_enabled=False,
+            custom_signatures=[
+                CustomSignature(
+                    id=300000001,
+                    name="Custom SQL",
+                    pattern=r"/union\s+select/i",
+                    scope="/api/*",
+                ),
+                CustomSignature(
+                    id=300000002,
+                    name="Header Inject",
+                    pattern=r"/X-Internal/",
+                    scope="global",
+                ),
+            ],
+        ),
+        bot_gaps=[],
+        warnings=[],
+        summary=ConversionSummary(
+            total=5,
+            directly_translated=3,
+            translated_with_loss=0,
+            decisions_required=0,
+            cannot_translate=2,
+        ),
+    )
+
+
+@pytest.fixture
+def decisions():
+    """A DecisionSet with example decisions matching the analysis_result fixture."""
+    ds = DecisionSet()
+    ds.add_signature(
+        SignatureDecision(
+            sig_id=200001001,
+            description="SQL Injection",
+            scope="global",
+            action=AlarmOnlyAction.EXCLUDE,
+        )
+    )
+    ds.add_signature(
+        SignatureDecision(
+            sig_id=200001002,
+            description="XSS",
+            scope="url:/login",
+            action=AlarmOnlyAction.ENFORCE,
+        )
+    )
+    ds.add_violation(
+        ViolationDecision(
+            violation="VIOL_COOKIE_MODIFIED",
+            action=ViolationAction.DISABLE,
+        )
+    )
+    ds.add_bot(
+        BotDecision(
+            category="unknown-bot",
+            asm_action="challenge",
+            action=BotDecisionAction.BLOCK,
+        )
+    )
+    return ds
