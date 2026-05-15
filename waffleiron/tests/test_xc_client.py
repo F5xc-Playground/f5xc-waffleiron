@@ -4,7 +4,7 @@ import responses
 import pytest
 from waffleiron.xc_client.client import XCClient
 from waffleiron.xc_client.config import XCConfig
-from waffleiron.xc_client.errors import XCAuthError, XCNotFoundError, XCConflictError
+from waffleiron.xc_client.errors import XCAuthError, XCNotFoundError, XCConflictError, XCRateLimitError, XCServerError
 
 
 @pytest.fixture
@@ -63,6 +63,24 @@ class TestErrorHandling:
             json={"message": "already exists"}, status=409)
         client = XCClient(xc_config)
         with pytest.raises(XCConflictError):
+            client.create_object("app_firewalls", "ns", {})
+
+    @responses.activate
+    def test_429_raises_rate_limit_error(self, xc_config):
+        responses.add(responses.POST,
+            "https://test.console.ves.volterra.io/api/config/namespaces/ns/app_firewalls",
+            json={"message": "rate limited"}, status=429)
+        client = XCClient(xc_config)
+        with pytest.raises(XCRateLimitError):
+            client.create_object("app_firewalls", "ns", {})
+
+    @responses.activate
+    def test_500_raises_server_error(self, xc_config):
+        responses.add(responses.POST,
+            "https://test.console.ves.volterra.io/api/config/namespaces/ns/app_firewalls",
+            json={"message": "internal error"}, status=500)
+        client = XCClient(xc_config)
+        with pytest.raises(XCServerError):
             client.create_object("app_firewalls", "ns", {})
 
 

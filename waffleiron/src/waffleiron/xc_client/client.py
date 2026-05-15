@@ -38,6 +38,8 @@ class XCClient:
         # Token auth header
         if config.auth_method == "token" and config.api_token:
             self._session.headers["Authorization"] = f"APIToken {config.api_token}"
+        elif config.auth_method == "p12":
+            raise NotImplementedError("P12 certificate authentication is not yet supported")
 
         # Retry adapter for transient transport errors only.
         # Do NOT include 429 or 500 — the `responses` mock library doesn't
@@ -95,6 +97,8 @@ class XCClient:
         url = f"{self._config.tenant_url.rstrip('/')}/{path.lstrip('/')}"
         response = self._session.request(method, url, **kwargs)
         self._raise_for_status(response)
+        if not response.content:
+            return {}
         return response.json()
 
     # ------------------------------------------------------------------
