@@ -17,17 +17,26 @@ _BOT_ACTION_MAP: dict[str, str] = {
     "ignore": "IGNORE",
 }
 
+_HTTP_CODE_TO_XC: dict[int, str] = {
+    200: "OK",
+    400: "BadRequest",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "NotFound",
+}
+
 
 class AppFirewallTranslator:
     """Translates an AsmPolicy intermediate model to an XC app_firewall CreateSpec."""
 
     @staticmethod
-    def translate(policy: AsmPolicy, namespace: str) -> dict:
+    def translate(policy: AsmPolicy, namespace: str, name_override: str | None = None) -> dict:
         """Return the XC app_firewall CreateSpec as a Python dict.
 
         Args:
             policy: Populated AsmPolicy intermediate model.
             namespace: Target F5 XC namespace.
+            name_override: Optional name to use instead of policy.name.
 
         Returns:
             A dict matching the XC app_firewall CreateSpec JSON structure.
@@ -61,7 +70,7 @@ class AppFirewallTranslator:
 
         return {
             "metadata": {
-                "name": sanitize_xc_name(policy.name),
+                "name": sanitize_xc_name(name_override or policy.name),
                 "namespace": namespace,
             },
             "spec": spec,
@@ -81,10 +90,10 @@ class AppFirewallTranslator:
         )
 
         # Violation settings (oneof: disabled_violation_types | default_violation_settings)
-        detection["violation_settings"] = AppFirewallTranslator._build_violation_settings(policy)
+        detection.update(AppFirewallTranslator._build_violation_settings(policy))
 
         # Staging settings (oneof: stage_new_and_updated_signatures | disable_staging)
-        detection["signatures_staging_settings"] = AppFirewallTranslator._build_staging(policy)
+        detection.update(AppFirewallTranslator._build_staging(policy))
 
         # Threat campaigns (oneof: enable_threat_campaigns | disable_threat_campaigns)
         if policy.signatures.threat_campaigns_enabled:
@@ -186,10 +195,11 @@ class AppFirewallTranslator:
         bp = policy.blocking_page
         if bp.enabled and bp.custom_html:
             translated_html = translate_blocking_page_vars(bp.custom_html)
+            xc_code = _HTTP_CODE_TO_XC.get(bp.response_code, "Forbidden")
             return {
                 "blocking_page": {
-                    "blocking_page": translated_html,
-                    "response_code": bp.response_code,
+                    "blocking_page_body": translated_html,
+                    "response_code": xc_code,
                 }
             }
         return {"use_default_blocking_page": {}}
@@ -216,5 +226,5 @@ class AppFirewallTranslator:
     def _build_response_codes(policy: AsmPolicy) -> dict:
         """Build response codes setting (oneof: allowed_response_codes | allow_all_response_codes)."""
         if policy.allowed_response_codes:
-            return {"allowed_response_codes": {"response_codes": policy.allowed_response_codes}}
+            return {"allowed_response_codes": {"response_code": policy.allowed_response_codes}}
         return {"allow_all_response_codes": {}}

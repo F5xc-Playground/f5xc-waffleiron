@@ -196,12 +196,13 @@ class ServicePolicyTranslator:
     """
 
     @staticmethod
-    def translate(policy: AsmPolicy, namespace: str) -> dict | None:
+    def translate(policy: AsmPolicy, namespace: str, name_override: str | None = None) -> dict | None:
         """Build the XC service_policy JSON object.
 
         Args:
             policy: Populated AsmPolicy intermediate model.
             namespace: Target F5 XC namespace.
+            name_override: Optional name to use instead of policy.name.
 
         Returns:
             A dict matching the XC service_policy CreateSpec JSON structure,
@@ -214,28 +215,33 @@ class ServicePolicyTranslator:
             cidr = _ip_to_cidr(entry.ip, entry.mask)
             rule = {
                 "metadata": {"name": _rule_name_for_ip(cidr)},
-                "action": "ALLOW",
-                "match": {
-                    "src_ip_prefix_list": {
-                        "prefixes": [cidr],
-                    }
+                "spec": {
+                    "action": "ALLOW",
+                    "any_client": {},
+                    "ip_prefix_list": {
+                        "ip_prefixes": [cidr],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
 
         # --- 2. Geo deny rules (from geolocation.disallowed) ---
+        geo_codes = []
         for country_name in policy.geolocation.disallowed:
             code = _COUNTRY_NAME_TO_CODE.get(country_name)
-            if code is None:
-                # Unknown country — skip silently
-                continue
+            if code is not None:
+                geo_codes.append(code)
+        if geo_codes:
+            codes_str = ", ".join(geo_codes)
             rule = {
-                "metadata": {"name": _rule_name_for_country(country_name)},
-                "action": "DENY",
-                "match": {
-                    "geo_ip": {
-                        "country_codes": [code],
-                    }
+                "metadata": {"name": sanitize_xc_name("deny-geo-blocked-countries")},
+                "spec": {
+                    "action": "DENY",
+                    "client_selector": {
+                        "expressions": [f"country in ({codes_str})"],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
@@ -244,11 +250,13 @@ class ServicePolicyTranslator:
         for category in policy.ip_intelligence.categories:
             rule = {
                 "metadata": {"name": _rule_name_for_threat(category.name)},
-                "action": "DENY",
-                "match": {
-                    "ip_threat_category": {
-                        "category": category.name,
-                    }
+                "spec": {
+                    "action": "DENY",
+                    "any_client": {},
+                    "ip_threat_category_list": {
+                        "ip_threat_categories": [category.name],
+                    },
+                    "waf_action": {"none": {}},
                 },
             }
             rules.append(rule)
@@ -256,7 +264,7 @@ class ServicePolicyTranslator:
         if not rules:
             return None
 
-        policy_name = sanitize_xc_name(policy.name) + "-service-policy"
+        policy_name = sanitize_xc_name(name_override or policy.name) + "-service-policy"
         # Truncate to 64 chars safely
         policy_name = policy_name[:64].rstrip("-")
 
@@ -266,6 +274,8 @@ class ServicePolicyTranslator:
                 "namespace": namespace,
             },
             "spec": {
-                "rules": rules,
+                "rule_list": {
+                    "rules": rules,
+                },
             },
         }

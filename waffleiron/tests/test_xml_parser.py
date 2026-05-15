@@ -1,7 +1,138 @@
 """Tests for the XML policy parser."""
 
+from pathlib import Path
+
+import pytest
+
 from waffleiron.parsers.xml_parser import XmlPolicyParser
 from waffleiron.model import EnforcementMode, AccuracyLevel
+
+
+class TestRealExportFormat:
+    """Tests against a real ``tmsh save asm policy`` export (v11.6 format)."""
+
+    def test_policy_name(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.name == "linux-high"
+
+    def test_enforcement_mode(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.enforcement_mode == EnforcementMode.BLOCKING
+
+    def test_encoding(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.encoding == "utf-8"
+
+    def test_signature_overrides(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.signatures.global_overrides) == 5
+        sig_ids = {s.sig_id for s in policy.signatures.global_overrides}
+        assert 200002444 in sig_ids
+
+    def test_signature_sets(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.signature_sets) >= 1
+
+    def test_staging_disabled(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.signatures.staging_enabled is False
+
+    def test_violations(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.violations) >= 30
+        names = {v.name for v in policy.violations}
+        assert "CSRF attack detected" in names or "CSRF" in names
+
+    def test_alarm_only_violations(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        alarm_only = [v for v in policy.violations if v.alarm and not v.block]
+        assert len(alarm_only) >= 5
+
+    def test_urls(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.entities.urls) == 1
+        assert policy.entities.urls[0].name == "*"
+        assert policy.entities.urls[0].type == "wildcard"
+
+    def test_parameters(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.entities.parameters) == 1
+        assert policy.entities.parameters[0].name == "*"
+
+    def test_file_types(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.entities.file_types) == 1
+        assert policy.entities.file_types[0].name == "*"
+
+    def test_headers(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.entities.headers) >= 3
+        names = {h.name for h in policy.entities.headers}
+        assert "*" in names
+
+    def test_methods(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.entities.methods) == 3
+        names = {m.name for m in policy.entities.methods}
+        assert "GET" in names
+        assert "POST" in names
+
+    def test_response_codes(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert len(policy.allowed_response_codes) == 6
+        assert 400 in policy.allowed_response_codes
+        assert 503 in policy.allowed_response_codes
+
+    def test_csrf_disabled(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.csrf.enabled is False
+
+    def test_data_guard(self, fixtures_path):
+        policy = XmlPolicyParser.parse(fixtures_path / "real_export_linux_high.xml")
+        assert policy.data_guard.enabled is False
+        assert policy.data_guard.credit_cards is False
+        assert policy.data_guard.ssn is False
+
+
+class TestRealExportPublicPolicies:
+    """Smoke tests parsing the full set of public F5 ASM policy exports.
+
+    These run only when the downloaded policies are present at /tmp/asm-test-policies/xml/.
+    """
+
+    POLICY_DIR = Path("/tmp/asm-test-policies/xml")
+
+    @pytest.fixture(autouse=True)
+    def _skip_if_missing(self):
+        if not self.POLICY_DIR.exists():
+            pytest.skip("Public ASM policies not downloaded to /tmp/asm-test-policies/xml/")
+
+    def _all_xml_files(self):
+        return sorted(self.POLICY_DIR.glob("*.xml"))
+
+    def test_all_parse_without_error(self):
+        failures = []
+        for xml_file in self._all_xml_files():
+            try:
+                XmlPolicyParser.parse(xml_file)
+            except Exception as e:
+                failures.append(f"{xml_file.name}: {e}")
+        assert not failures, f"Parse failures:\n" + "\n".join(failures)
+
+    def test_all_have_names(self):
+        for xml_file in self._all_xml_files():
+            policy = XmlPolicyParser.parse(xml_file)
+            assert policy.name, f"{xml_file.name} has empty name"
+
+    def test_all_have_violations(self):
+        for xml_file in self._all_xml_files():
+            policy = XmlPolicyParser.parse(xml_file)
+            assert len(policy.violations) > 0, f"{xml_file.name} has no violations"
+
+    def test_all_have_signatures(self):
+        for xml_file in self._all_xml_files():
+            policy = XmlPolicyParser.parse(xml_file)
+            assert len(policy.signatures.global_overrides) > 0, f"{xml_file.name} has no sig overrides"
 
 
 class TestMinimalPolicy:

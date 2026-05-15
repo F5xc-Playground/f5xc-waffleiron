@@ -1,8 +1,8 @@
 # Stage 1: Build React frontend
-FROM node:20-slim AS frontend
+FROM node:22-slim AS frontend
 WORKDIR /app
-COPY waffleiron-web/package*.json ./
-RUN npm ci
+COPY waffleiron-web/package.json waffleiron-web/package-lock.json ./
+RUN npm install --no-audit --no-fund
 COPY waffleiron-web/ ./
 RUN npm run build
 

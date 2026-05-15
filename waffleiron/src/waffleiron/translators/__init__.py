@@ -23,11 +23,16 @@ class TranslationResult:
     http_lb_patch: Optional[dict]
 
 
-def translate(policy: AsmPolicy, decisions: DecisionSet, namespace: str) -> TranslationResult:
+def translate(
+    policy: AsmPolicy,
+    decisions: DecisionSet,
+    namespace: str,
+    name_override: str | None = None,
+) -> TranslationResult:
     """Run all four translators and return a unified result."""
     return TranslationResult(
-        app_firewall=AppFirewallTranslator.translate(policy, namespace),
-        exclusion_policy=ExclusionPolicyTranslator.translate(policy, decisions, namespace),
-        service_policy=ServicePolicyTranslator.translate(policy, namespace),
+        app_firewall=AppFirewallTranslator.translate(policy, namespace, name_override),
+        exclusion_policy=ExclusionPolicyTranslator.translate(policy, decisions, namespace, name_override),
+        service_policy=ServicePolicyTranslator.translate(policy, namespace, name_override),
         http_lb_patch=HttpLbPatchTranslator.translate(policy),
     )

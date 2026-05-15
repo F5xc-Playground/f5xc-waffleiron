@@ -101,10 +101,45 @@ async def get_analysis(request: Request, conversion_id: str):
         session.status = "analyzed"
 
     result = session.analysis
+    policy = session.asm_policy
+
+    policy_info = {
+        "name": policy.name,
+        "enforcement_mode": policy.enforcement_mode.value,
+        "encoding": policy.encoding,
+        "signature_accuracy": policy.signatures.accuracy_level.value,
+        "staging_enabled": policy.signatures.staging_enabled,
+        "threat_campaigns_enabled": policy.signatures.threat_campaigns_enabled,
+        "features": {
+            "data_guard": policy.data_guard.enabled,
+            "csrf": policy.csrf.enabled,
+            "bot_defense": policy.bot_defense.enabled,
+            "brute_force": policy.brute_force.enabled,
+            "session_tracking": policy.session_tracking.enabled,
+            "ip_intelligence": len(policy.ip_intelligence.categories) > 0,
+            "geolocation": len(policy.geolocation.disallowed) > 0,
+            "blocking_page": policy.blocking_page.enabled,
+        },
+        "entity_counts": {
+            "urls": len(policy.entities.urls),
+            "parameters": len(policy.entities.parameters),
+            "file_types": len(policy.entities.file_types),
+            "cookies": len(policy.entities.cookies),
+            "headers": len(policy.entities.headers),
+            "signature_overrides": len(policy.signatures.global_overrides),
+            "violations": len(policy.violations),
+            "whitelist_ips": len(policy.whitelist_ips),
+        },
+    }
+
     return {
+        "policy_info": policy_info,
         "summary": dataclasses.asdict(result.summary),
         "alarm_only_signatures": [dataclasses.asdict(s) for s in result.alarm_only_signatures],
         "alarm_only_violations": [dataclasses.asdict(v) for v in result.alarm_only_violations],
+        "untranslatable": dataclasses.asdict(result.untranslatable),
+        "bot_gaps": [dataclasses.asdict(g) for g in result.bot_gaps],
+        "warnings": [dataclasses.asdict(w) for w in result.warnings],
     }
 
 
@@ -150,11 +185,12 @@ async def translate_conversion(request: Request, conversion_id: str):
     session = _get_session(request, conversion_id)
     body = await request.json()
     namespace = body.get("namespace", "default")
+    name_override = body.get("name")
 
     if session.asm_policy is None:
         raise HTTPException(status_code=400, detail="No policy parsed yet")
 
-    result = translate(session.asm_policy, session.decisions, namespace)
+    result = translate(session.asm_policy, session.decisions, namespace, name_override)
     session.translation = result
     session.status = "translated"
 

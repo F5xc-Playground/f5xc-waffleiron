@@ -208,13 +208,13 @@ def _validate_app_firewall(obj: dict) -> tuple[list[ValidationError], list[Valid
     # --- Allowed response codes ---
     if "allowed_response_codes" in spec:
         arc = spec["allowed_response_codes"]
-        if isinstance(arc, dict) and "response_codes" in arc:
-            codes = arc["response_codes"]
+        if isinstance(arc, dict) and "response_code" in arc:
+            codes = arc["response_code"]
             if isinstance(codes, list) and len(codes) > 48:
                 errors.append(
                     _err(
-                        "spec.allowed_response_codes.response_codes",
-                        f"response_codes exceeds 48 items (got {len(codes)})",
+                        "spec.allowed_response_codes.response_code",
+                        f"response_code exceeds 48 items (got {len(codes)})",
                     )
                 )
 

@@ -1,0 +1,8 @@
+services:
+  waffleiron:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - F5XC_TENANT_URL=${F5XC_TENANT_URL:-}
+      - F5XC_API_TOKEN=${F5XC_API_TOKEN:-}

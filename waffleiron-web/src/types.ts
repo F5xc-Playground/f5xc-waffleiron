@@ -4,10 +4,53 @@ export interface ConversionSession {
   policy_name: string;
 }
 
+export interface PolicyInfo {
+  name: string;
+  enforcement_mode: 'blocking' | 'transparent';
+  encoding: string;
+  signature_accuracy: string;
+  staging_enabled: boolean;
+  threat_campaigns_enabled: boolean;
+  features: Record<string, boolean>;
+  entity_counts: Record<string, number>;
+}
+
 export interface AnalysisResult {
+  policy_info: PolicyInfo;
   summary: ConversionSummary;
   alarm_only_signatures: AlarmOnlySignature[];
   alarm_only_violations: AlarmOnlyViolation[];
+  untranslatable: UntranslatableSummary;
+  bot_gaps: BotGap[];
+  warnings: LimitWarning[];
+}
+
+export interface LimitWarning {
+  resource: string;
+  count: number;
+  limit: number;
+  message: string;
+}
+
+export interface UntranslatableSummary {
+  custom_signature_count: number;
+  session_tracking_enabled: boolean;
+  session_hijacking_enabled: boolean;
+  brute_force_enabled: boolean;
+  custom_signatures: CustomSignature[];
+}
+
+export interface CustomSignature {
+  id: number;
+  name: string;
+  pattern: string;
+  scope: string;
+}
+
+export interface BotGap {
+  category: string;
+  asm_action: string;
+  reason: string;
 }
 
 export interface ConversionSummary {

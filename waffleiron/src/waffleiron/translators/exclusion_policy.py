@@ -30,13 +30,14 @@ class ExclusionPolicyTranslator:
     """Translates AsmPolicy + DecisionSet to a XC waf_exclusion_policy dict."""
 
     @staticmethod
-    def translate(policy: AsmPolicy, decisions: DecisionSet, namespace: str) -> dict:
+    def translate(policy: AsmPolicy, decisions: DecisionSet, namespace: str, name_override: str | None = None) -> dict:
         """Build the XC waf_exclusion_policy JSON object.
 
         Args:
             policy: Populated AsmPolicy intermediate model.
             decisions: User decisions for alarm-only signatures.
             namespace: Target F5 XC namespace.
+            name_override: Optional name to use instead of policy.name.
 
         Returns:
             A dict matching the XC waf_exclusion_policy CreateSpec JSON structure.
@@ -109,7 +110,7 @@ class ExclusionPolicyTranslator:
         # Add skip-processing rules
         exclusion_rules.extend(skip_rules.values())
 
-        policy_name = sanitize_xc_name(policy.name) + "-exclusions"
+        policy_name = sanitize_xc_name(name_override or policy.name) + "-exclusions"
         # Truncate the suffix-appended name to 64 chars
         policy_name = policy_name[:64].rstrip("-")
 
