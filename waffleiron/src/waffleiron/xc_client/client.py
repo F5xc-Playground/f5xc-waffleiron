@@ -132,3 +132,8 @@ class XCClient:
         """GET a single object by resource type, namespace, and name."""
         path = f"/api/config/namespaces/{namespace}/{resource}/{name}"
         return self._request("GET", path)
+
+    def delete_object(self, resource: str, namespace: str, name: str) -> dict:
+        """DELETE an object by resource type, namespace, and name."""
+        path = f"/api/config/namespaces/{namespace}/{resource}/{name}"
+        return self._request("DELETE", path, json={"name": name, "namespace": namespace})

@@ -110,6 +110,9 @@ class ExclusionPolicyTranslator:
         # Add skip-processing rules
         exclusion_rules.extend(skip_rules.values())
 
+        if not exclusion_rules:
+            return None
+
         suffix = "-exc"
         base = sanitize_xc_name(name_override or policy.name)[:64 - len(suffix)].rstrip("-")
         policy_name = base + suffix

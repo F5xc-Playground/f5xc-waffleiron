@@ -18,7 +18,7 @@ class TranslationResult:
     """Container for all XC objects produced by translation."""
 
     app_firewall: dict
-    exclusion_policy: dict
+    exclusion_policy: Optional[dict]
     service_policy: Optional[dict]
     http_lb_patch: Optional[dict]
 

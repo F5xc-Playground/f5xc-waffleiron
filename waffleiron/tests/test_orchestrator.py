@@ -57,7 +57,7 @@ class TestMinimalPolicy:
         result = translate(minimal_policy, decisions, "ns")
         assert result.app_firewall is not None
 
-    def test_minimal_has_exclusion_policy(self, minimal_policy):
+    def test_minimal_has_no_exclusion_policy(self, minimal_policy):
         decisions = DecisionSet()
         result = translate(minimal_policy, decisions, "ns")
-        assert result.exclusion_policy is not None
+        assert result.exclusion_policy is None

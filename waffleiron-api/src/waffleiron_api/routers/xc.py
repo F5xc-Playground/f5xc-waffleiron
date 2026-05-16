@@ -16,8 +16,10 @@ _OBJECT_TYPE_MAP: dict[str, tuple[str, str]] = {
     "waf_exclusion_policy": ("waf_exclusion_policys", "exclusion_policy"),
     "exclusion_policy": ("waf_exclusion_policys", "exclusion_policy"),
     "service_policy": ("service_policys", "service_policy"),
-    "http_lb_patch": ("http_loadbalancers", "http_lb_patch"),
 }
+
+# http_lb_patch is a reference snippet, not a standalone XC object — it cannot be pushed directly
+_NON_PUSHABLE = {"http_lb_patch"}
 
 
 # ── Dependency helpers ──────────────────────────────────────────────
@@ -118,6 +120,12 @@ async def push_to_xc(request: Request, conversion_id: str):
 
     results = []
     for obj_type in object_types:
+        if obj_type in _NON_PUSHABLE:
+            results.append(
+                {"object_type": obj_type, "success": True, "message": "reference only, not pushed"}
+            )
+            continue
+
         mapping = _OBJECT_TYPE_MAP.get(obj_type)
         if mapping is None:
             results.append(
@@ -143,5 +151,54 @@ async def push_to_xc(request: Request, conversion_id: str):
             results.append(
                 {"object_type": obj_type, "success": False, "error": str(e), "namespace": obj_namespace}
             )
+
+    return {"results": results}
+
+
+# ── POST /conversions/{id}/push/delete ────────────────────────────
+
+
+@router.post("/conversions/{conversion_id}/push/delete")
+async def delete_from_xc(request: Request, conversion_id: str):
+    """Delete previously pushed XC objects from the tenant."""
+    session = _get_session(request, conversion_id)
+
+    if session.translation is None:
+        raise HTTPException(status_code=400, detail="Translation not yet performed")
+
+    body = await request.json()
+    object_types = body["objects"]
+
+    xc_client = _resolve_xc_client(
+        request,
+        tenant_url=body.get("tenant_url"),
+        api_token=body.get("api_token"),
+    )
+
+    results = []
+    for obj_type in object_types:
+        if obj_type in _NON_PUSHABLE:
+            results.append({"object_type": obj_type, "success": True, "message": "reference only, nothing to delete"})
+            continue
+
+        mapping = _OBJECT_TYPE_MAP.get(obj_type)
+        if mapping is None:
+            results.append({"object_type": obj_type, "success": False, "error": "unknown type"})
+            continue
+
+        resource, attr_name = mapping
+        obj_data = getattr(session.translation, attr_name, None)
+        if obj_data is None:
+            results.append({"object_type": obj_type, "success": False, "error": "not available"})
+            continue
+
+        obj_namespace = obj_data.get("metadata", {}).get("namespace", "default")
+        obj_name = obj_data.get("metadata", {}).get("name", "")
+
+        try:
+            xc_client.delete_object(resource, obj_namespace, obj_name)
+            results.append({"object_type": obj_type, "success": True, "namespace": obj_namespace})
+        except Exception as e:
+            results.append({"object_type": obj_type, "success": False, "error": str(e), "namespace": obj_namespace})
 
     return {"results": results}

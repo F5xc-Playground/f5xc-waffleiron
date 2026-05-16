@@ -328,7 +328,7 @@ def make_policy_with_n_overrides(n):
     )
 
 
-def make_policy_with_disabled_sig(sig_id):
+def make_policy_with_disabled_sig(sig_id, **kwargs):
     """Policy with a globally disabled signature (enabled=False)."""
     return make_minimal_policy(
         signatures=SignatureConfig(
@@ -338,6 +338,7 @@ def make_policy_with_disabled_sig(sig_id):
             staging_period=7,
             threat_campaigns_enabled=True,
         ),
+        **kwargs,
     )
 
 

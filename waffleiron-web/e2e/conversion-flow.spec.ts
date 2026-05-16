@@ -122,10 +122,10 @@ test.describe('Conversion flow', () => {
 
     // Open push modal
     await page.getByText('Push to XC Tenant').click();
-    await expect(page.getByText('XC Connection')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/XC Conn/)).toBeVisible({ timeout: 5_000 });
 
     // Close it
     await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByText('XC Connection')).not.toBeVisible();
+    await expect(page.getByText(/XC Conn/)).not.toBeVisible();
   });
 });

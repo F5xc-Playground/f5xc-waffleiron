@@ -38,55 +38,55 @@ def decisions_with_sig(sig_id: int, action: AlarmOnlyAction) -> DecisionSet:
 # ---------------------------------------------------------------------------
 
 class TestTopLevelStructure:
-    def test_result_has_metadata(self):
+    def test_empty_policy_returns_none(self):
         policy = make_minimal_policy()
+        result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
+        assert result is None
+
+    def test_result_has_metadata(self):
+        policy = make_policy_with_disabled_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert "metadata" in result
 
     def test_metadata_has_name(self):
-        policy = make_minimal_policy(name="my-policy")
+        policy = make_policy_with_disabled_sig(200001001, name="my-policy")
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert "name" in result["metadata"]
 
     def test_metadata_name_contains_policy_name(self):
-        policy = make_minimal_policy(name="my-policy")
+        policy = make_policy_with_disabled_sig(200001001, name="my-policy")
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert "my-policy" in result["metadata"]["name"]
 
     def test_metadata_has_namespace(self):
-        policy = make_minimal_policy()
+        policy = make_policy_with_disabled_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert result["metadata"]["namespace"] == "test-ns"
 
     def test_result_has_spec(self):
-        policy = make_minimal_policy()
+        policy = make_policy_with_disabled_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert "spec" in result
 
     def test_spec_has_waf_exclusion_rules(self):
-        policy = make_minimal_policy()
+        policy = make_policy_with_disabled_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert "waf_exclusion_rules" in result["spec"]
 
     def test_waf_exclusion_rules_is_list(self):
-        policy = make_minimal_policy()
+        policy = make_policy_with_disabled_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="test-ns")
         assert isinstance(result["spec"]["waf_exclusion_rules"], list)
 
-    def test_empty_policy_produces_empty_rules(self):
-        policy = make_minimal_policy()
-        result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
-
     def test_metadata_name_sanitized(self):
-        policy = make_minimal_policy(name="My Policy NAME")
+        policy = make_policy_with_disabled_sig(200001001, name="My Policy NAME")
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
         name = result["metadata"]["name"]
         assert name == name.lower()
         assert " " not in name
 
     def test_metadata_name_max_64_chars(self):
-        policy = make_minimal_policy(name="a" * 100)
+        policy = make_policy_with_disabled_sig(200001001, name="a" * 100)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
         assert len(result["metadata"]["name"]) <= 64
 
@@ -170,7 +170,7 @@ class TestDisabledSignatures:
             ),
         )
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
     def test_multiple_global_disabled_sigs_coalesced_into_one_rule(self):
         policy = make_minimal_policy(
@@ -236,9 +236,7 @@ class TestAttackSigsCheckFalse:
             )
         )
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        rules = result["spec"]["waf_exclusion_rules"]
-        skip_rules = [r for r in rules if "waf_skip_processing" in r]
-        assert len(skip_rules) == 0
+        assert result is None
 
     def test_url_with_no_sig_check_attr_no_skip_rule(self):
         policy = make_minimal_policy(
@@ -247,9 +245,7 @@ class TestAttackSigsCheckFalse:
             )
         )
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        rules = result["spec"]["waf_exclusion_rules"]
-        skip_rules = [r for r in rules if "waf_skip_processing" in r]
-        assert len(skip_rules) == 0
+        assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +308,7 @@ class TestParameterContext:
             )
         )
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -353,19 +349,19 @@ class TestAlarmOnlyDecisions:
         policy = make_policy_with_alarm_only_sig(200001001)
         ds = decisions_with_sig(200001001, AlarmOnlyAction.ENFORCE)
         result = ExclusionPolicyTranslator.translate(policy, ds, namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
     def test_alarm_only_sig_with_defer_creates_no_exclusion(self):
         policy = make_policy_with_alarm_only_sig(200001001)
         ds = decisions_with_sig(200001001, AlarmOnlyAction.DEFER)
         result = ExclusionPolicyTranslator.translate(policy, ds, namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
     def test_alarm_only_sig_no_decision_creates_no_exclusion(self):
         # No decision in set → defaults to DEFER → no exclusion
         policy = make_policy_with_alarm_only_sig(200001001)
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
     def test_alarm_only_exclude_context_is_any(self):
         policy = make_policy_with_alarm_only_sig(200001001)
@@ -436,7 +432,7 @@ class TestCookieAndHeaderContext:
             )
         )
         result = ExclusionPolicyTranslator.translate(policy, empty_decisions(), namespace="ns")
-        assert result["spec"]["waf_exclusion_rules"] == []
+        assert result is None
 
 
 # ---------------------------------------------------------------------------

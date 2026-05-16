@@ -85,19 +85,13 @@ class TestPush:
             json={"metadata": {"name": "test"}},
             status=200,
         )
-        responses_mock.add(
-            responses_mock.POST,
-            "https://test.console.ves.volterra.io/api/config/namespaces/test-ns/waf_exclusion_policys",
-            json={"metadata": {"name": "test"}},
-            status=200,
-        )
         response = client.post(
             f"/api/v1/conversions/{translated_session_id}/push",
             json={
                 "namespace": "test-ns",
                 "tenant_url": "https://test.console.ves.volterra.io",
                 "api_token": "token",
-                "objects": ["app_firewall", "waf_exclusion_policy"],
+                "objects": ["app_firewall"],
             },
         )
         assert response.status_code == 200
