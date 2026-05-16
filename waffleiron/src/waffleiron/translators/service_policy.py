@@ -264,9 +264,9 @@ class ServicePolicyTranslator:
         if not rules:
             return None
 
-        policy_name = sanitize_xc_name(name_override or policy.name) + "-service-policy"
-        # Truncate to 64 chars safely
-        policy_name = policy_name[:64].rstrip("-")
+        suffix = "-svc"
+        base = sanitize_xc_name(name_override or policy.name)[:64 - len(suffix)].rstrip("-")
+        policy_name = base + suffix
 
         return {
             "metadata": {

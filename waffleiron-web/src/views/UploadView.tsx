@@ -28,10 +28,10 @@ export default function UploadView() {
       <div className="mx-auto max-w-2xl">
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-            Upload ASM Policy
+            Upload AWAF Policy
           </h2>
           <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
-            Upload a BIG-IP ASM policy export file to begin conversion.
+            Upload a BIG-IP AWAF policy export file to begin conversion.
           </p>
 
           <FileDropzone

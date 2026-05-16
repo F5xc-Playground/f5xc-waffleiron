@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConversion } from '../context/ConversionContext';
 import { getXCStatus, pushToXC } from '../api';
-import NamespaceSelector from './NamespaceSelector';
 import type { TranslationOutputs, PushResult, XCStatus } from '../types';
 
 const OBJECT_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
@@ -14,6 +13,12 @@ const OBJECT_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
 function getAvailableObjects(outputs: TranslationOutputs | null) {
   if (!outputs) return [];
   return OBJECT_TYPES.filter((t) => outputs[t.key] !== undefined);
+}
+
+function getObjectNamespace(outputs: TranslationOutputs, key: string): string {
+  const obj = outputs[key as keyof TranslationOutputs] as Record<string, unknown> | undefined;
+  const meta = obj?.metadata as Record<string, unknown> | undefined;
+  return (meta?.namespace as string) ?? 'default';
 }
 
 interface PushModalProps {
@@ -31,8 +36,6 @@ export default function PushModal({ onClose }: PushModalProps) {
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
-
-  const [namespace, setNamespace] = useState('shared');
 
   const availableObjects = getAvailableObjects(state.outputs);
   const [selectedObjects, setSelectedObjects] = useState<Set<string>>(
@@ -72,9 +75,6 @@ export default function PushModal({ onClose }: PushModalProps) {
   }, [state.xcStatus, dispatch]);
 
   const isContainerConfigured = xcStatus?.configured === true;
-
-  const effectiveTenantUrl = isContainerConfigured ? xcStatus?.tenant_url : tenantUrl || undefined;
-  const effectiveApiToken = isContainerConfigured ? undefined : apiToken || undefined;
 
   const handleTestConnection = useCallback(async () => {
     setTesting(true);
@@ -116,12 +116,12 @@ export default function PushModal({ onClose }: PushModalProps) {
     setResults(null);
 
     try {
-      const pushResults = await pushToXC(state.sessionId, {
-        namespace,
-        tenant_url: isContainerConfigured ? undefined : tenantUrl || undefined,
-        api_token: isContainerConfigured ? undefined : apiToken || undefined,
-        objects: Array.from(selectedObjects),
-      });
+      const pushResults = await pushToXC(
+        state.sessionId,
+        Array.from(selectedObjects),
+        isContainerConfigured ? undefined : tenantUrl || undefined,
+        isContainerConfigured ? undefined : apiToken || undefined,
+      );
       setResults(pushResults);
       dispatch({ type: 'PUSH_COMPLETE', results: pushResults });
     } catch (err) {
@@ -129,10 +129,10 @@ export default function PushModal({ onClose }: PushModalProps) {
     } finally {
       setPushing(false);
     }
-  }, [state.sessionId, namespace, tenantUrl, apiToken, selectedObjects, isContainerConfigured, dispatch]);
+  }, [state.sessionId, tenantUrl, apiToken, selectedObjects, isContainerConfigured, dispatch]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -234,15 +234,7 @@ export default function PushModal({ onClose }: PushModalProps) {
             </div>
           )}
 
-          {/* Namespace Selector */}
-          <NamespaceSelector
-            value={namespace}
-            onChange={setNamespace}
-            tenantUrl={effectiveTenantUrl}
-            apiToken={effectiveApiToken}
-          />
-
-          {/* Object Checklist */}
+          {/* Object Checklist with Namespaces */}
           <div>
             <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
               Objects to Push
@@ -253,19 +245,27 @@ export default function PushModal({ onClose }: PushModalProps) {
               </p>
             ) : (
               <div className="space-y-2">
-                {availableObjects.map((obj) => (
-                  <label key={obj.key} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedObjects.has(obj.key)}
-                      onChange={() => toggleObject(obj.key)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {obj.label}
-                    </span>
-                  </label>
-                ))}
+                {availableObjects.map((obj) => {
+                  const ns = state.outputs
+                    ? getObjectNamespace(state.outputs, obj.key)
+                    : 'default';
+                  return (
+                    <label key={obj.key} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedObjects.has(obj.key)}
+                        onChange={() => toggleObject(obj.key)}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {obj.label}
+                      </span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                        {ns}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -304,6 +304,11 @@ export default function PushModal({ onClose }: PushModalProps) {
                         <span className={r.success ? 'font-medium text-green-800 dark:text-green-300' : 'font-medium text-red-800 dark:text-red-300'}>
                           {label}
                         </span>
+                        {r.namespace && (
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                            → {r.namespace}
+                          </span>
+                        )}
                         {r.error && (
                           <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{r.error}</p>
                         )}
@@ -329,7 +334,7 @@ export default function PushModal({ onClose }: PushModalProps) {
             <button
               type="button"
               onClick={handlePush}
-              disabled={pushing || selectedObjects.size === 0 || !namespace}
+              disabled={pushing || selectedObjects.size === 0}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pushing ? (

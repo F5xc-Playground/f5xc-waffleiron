@@ -68,9 +68,13 @@ class AppFirewallTranslator:
         rc_setting = AppFirewallTranslator._build_response_codes(policy)
         spec.update(rc_setting)
 
+        suffix = "-waf"
+        base = sanitize_xc_name(name_override or policy.name)[:64 - len(suffix)].rstrip("-")
+        policy_name = base + suffix
+
         return {
             "metadata": {
-                "name": sanitize_xc_name(name_override or policy.name),
+                "name": policy_name,
                 "namespace": namespace,
             },
             "spec": spec,

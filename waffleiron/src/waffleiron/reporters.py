@@ -2,7 +2,7 @@
 
 The ``generate_report`` function is the single entry point.  It accepts an
 ``AnalysisResult`` and a ``DecisionSet``, and renders either a JSON or Markdown
-document describing the gaps between the source ASM policy and what can be
+document describing the gaps between the source AWAF policy and what can be
 expressed in XC WAF.
 """
 
@@ -40,10 +40,10 @@ def generate_report(
     """Generate a gap report in the requested format.
 
     Args:
-        analysis:         Structured analysis of the ASM policy.
+        analysis:         Structured analysis of the AWAF policy.
         decisions:        User decisions for alarm-only items.
         format:           ``ReportFormat.JSON`` or ``ReportFormat.MARKDOWN``.
-        policy_name:      Name of the source ASM policy (optional).
+        policy_name:      Name of the source AWAF policy (optional).
         enforcement_mode: Enforcement mode string (optional).
 
     Returns:
@@ -152,7 +152,7 @@ def _render_markdown(
     lines: list[str] = []
 
     # --- Header -------------------------------------------------------
-    lines.append("# ASM → XC Conversion Gap Report")
+    lines.append("# AWAF → XC Conversion Gap Report")
     lines.append("")
     lines.append(f"**Source policy:** {policy_name}")
     lines.append(f"**Enforcement mode:** {enforcement_mode}")
@@ -160,14 +160,16 @@ def _render_markdown(
 
     # --- Summary ------------------------------------------------------
     s = analysis.summary
+    pct = f" ({s.directly_translated * 100 // s.total}%)" if s.total else ""
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"- Total features analyzed: {s.total}")
-    pct = f" ({s.directly_translated * 100 // s.total}%)" if s.total else ""
-    lines.append(f"- Directly translated: {s.directly_translated}{pct}")
-    lines.append(f"- Translated with loss: {s.translated_with_loss}")
-    lines.append(f"- Decisions required: {s.decisions_required}")
-    lines.append(f"- Cannot translate: {s.cannot_translate}")
+    lines.append("| Metric | Count |")
+    lines.append("|--------|------:|")
+    lines.append(f"| Total features analyzed | {s.total} |")
+    lines.append(f"| Directly translated | {s.directly_translated}{pct} |")
+    lines.append(f"| Translated with loss | {s.translated_with_loss} |")
+    lines.append(f"| Decisions required | {s.decisions_required} |")
+    lines.append(f"| Cannot translate | {s.cannot_translate} |")
     lines.append("")
 
     # --- Alarm-Only Signatures ----------------------------------------
@@ -201,12 +203,15 @@ def _render_markdown(
     ps = analysis.positive_security
     lines.append("## Positive Security (Cannot Translate)")
     lines.append("")
-    lines.append("The following ASM positive security entities have no XC equivalent:")
-    lines.append(f"- URL entities: {ps.url_count} ({ps.wildcard_url_count} wildcard)")
-    lines.append(f"- Parameters with value constraints: {ps.constrained_parameter_count}")
-    lines.append(f"- File types: {ps.file_type_count}")
-    lines.append(f"- Cookies: {ps.cookie_count}")
-    lines.append(f"- Mandatory headers: {ps.mandatory_header_count}")
+    lines.append("These AWAF positive security entities have no XC equivalent:")
+    lines.append("")
+    lines.append("| Entity Type | Count |")
+    lines.append("|-------------|------:|")
+    lines.append(f"| URL entities | {ps.url_count} ({ps.wildcard_url_count} wildcard) |")
+    lines.append(f"| Parameters with value constraints | {ps.constrained_parameter_count} |")
+    lines.append(f"| File types | {ps.file_type_count} |")
+    lines.append(f"| Cookies | {ps.cookie_count} |")
+    lines.append(f"| Mandatory headers | {ps.mandatory_header_count} |")
     lines.append("")
 
     # --- Custom Signatures --------------------------------------------
@@ -226,22 +231,23 @@ def _render_markdown(
     u = analysis.untranslatable
     lines.append("## Untranslatable Features")
     lines.append("")
-    lines.append(f"- Session tracking: {'enabled' if u.session_tracking_enabled else 'disabled'}")
+    lines.append("| Feature | Status |")
+    lines.append("|---------|--------|")
+    lines.append(f"| Session tracking | {'Enabled' if u.session_tracking_enabled else 'Disabled'} |")
     lines.append(
-        f"- Session hijacking prevention: {'enabled' if u.session_hijacking_enabled else 'disabled'}"
+        f"| Session hijacking prevention | {'Enabled' if u.session_hijacking_enabled else 'Disabled'} |"
     )
-    lines.append(f"- Brute force detection: {'enabled' if u.brute_force_enabled else 'disabled'}")
+    lines.append(f"| Brute force detection | {'Enabled' if u.brute_force_enabled else 'Disabled'} |")
     lines.append("")
 
     # --- Bot Protection Gaps ------------------------------------------
     lines.append("## Bot Protection Gaps")
     lines.append("")
     if analysis.bot_gaps:
-        lines.append("| Category | ASM Action | XC Support | Notes |")
-        lines.append("|----------|-----------|------------|-------|")
+        lines.append("| Category | AWAF Action | XC Support | Notes |")
+        lines.append("|----------|------------|------------|-------|")
         for gap in analysis.bot_gaps:
-            xc_support = "None"
-            lines.append(f"| {gap.category} | {gap.asm_action} | {xc_support} | {gap.reason} |")
+            lines.append(f"| {gap.category} | {gap.asm_action} | None | {gap.reason} |")
     else:
         lines.append("_None_")
     lines.append("")
@@ -250,8 +256,10 @@ def _render_markdown(
     lines.append("## Warnings")
     lines.append("")
     if analysis.warnings:
+        lines.append("| Warning |")
+        lines.append("|---------|")
         for w in analysis.warnings:
-            lines.append(f"- {w.message}")
+            lines.append(f"| {w.message} |")
     else:
         lines.append("_None_")
     lines.append("")

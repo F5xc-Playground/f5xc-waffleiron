@@ -9,8 +9,8 @@ async function advanceToExport(page: import('@playwright/test').Page) {
   const fileInput = page.locator('input[type="file"]');
   await fileInput.setInputFiles(POLICY_FILE);
 
-  // Wait for analysis, then continue to export
-  const continueBtn = page.getByRole('button', { name: /continue to export/i });
+  // Wait for analysis, then advance to export
+  const continueBtn = page.getByRole('button', { name: /^export$/i });
   await expect(continueBtn).toBeVisible({ timeout: 10_000 });
   await continueBtn.click();
 
@@ -29,7 +29,7 @@ test.describe('Conversion flow', () => {
   });
 
   test('shows upload view on load', async ({ page }) => {
-    await expect(page.getByText('Upload ASM Policy')).toBeVisible();
+    await expect(page.getByText('Upload AWAF Policy')).toBeVisible();
     await expect(page.getByText('WaffleIron')).toBeVisible();
   });
 
@@ -65,14 +65,14 @@ test.describe('Conversion flow', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(POLICY_FILE);
 
-    const continueBtn = page.getByRole('button', { name: /continue to export/i });
+    const continueBtn = page.getByRole('button', { name: /^export$/i });
     await expect(continueBtn).toBeVisible({ timeout: 10_000 });
     await continueBtn.click();
 
     // Namespace defaults to "default"
     const nsInput = page.locator('#namespace');
     await expect(nsInput).toBeVisible({ timeout: 5_000 });
-    await expect(nsInput).toHaveValue('default');
+    await expect(nsInput).toHaveValue('shared');
 
     // Policy name populated from analysis
     const nameInput = page.locator('#policyName');
@@ -104,7 +104,7 @@ test.describe('Conversion flow', () => {
 
     // Click "Upload" step to go back further
     await page.getByRole('button', { name: 'Upload' }).click();
-    await expect(page.getByText('Upload ASM Policy')).toBeVisible();
+    await expect(page.getByText('Upload AWAF Policy')).toBeVisible();
   });
 
   test('start over resets to upload', async ({ page }) => {
@@ -114,7 +114,7 @@ test.describe('Conversion flow', () => {
     await expect(page.getByText('mature-tuned')).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole('button', { name: 'Start Over' }).click();
-    await expect(page.getByText('Upload ASM Policy')).toBeVisible();
+    await expect(page.getByText('Upload AWAF Policy')).toBeVisible();
   });
 
   test('push modal opens and closes', async ({ page }) => {

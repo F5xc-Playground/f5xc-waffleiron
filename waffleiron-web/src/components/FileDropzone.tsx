@@ -129,7 +129,7 @@ export default function FileDropzone({ onFileSelected, disabled = false }: FileD
         </svg>
 
         <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-          {isDragging ? 'Drop file here' : 'Drag and drop your ASM policy file'}
+          {isDragging ? 'Drop file here' : 'Drag and drop your AWAF policy file'}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           or click to browse (.xml, .json)

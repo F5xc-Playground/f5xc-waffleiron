@@ -23,6 +23,7 @@ type ConversionAction =
   | { type: 'UPLOAD_SUCCESS'; session: ConversionSession }
   | { type: 'ANALYSIS_LOADED'; analysis: AnalysisResult }
   | { type: 'TRANSLATION_COMPLETE'; outputs: TranslationOutputs }
+  | { type: 'OUTPUT_EDITED'; outputs: TranslationOutputs }
   | { type: 'PUSH_COMPLETE'; results: PushResult[] }
   | { type: 'XC_STATUS_LOADED'; status: XCStatus }
   | { type: 'RESET' }
@@ -56,6 +57,11 @@ function conversionReducer(state: ConversionState, action: ConversionAction): Co
       return {
         ...state,
         step: 'review',
+        outputs: action.outputs,
+      };
+    case 'OUTPUT_EDITED':
+      return {
+        ...state,
         outputs: action.outputs,
       };
     case 'PUSH_COMPLETE':

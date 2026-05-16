@@ -26,13 +26,23 @@ class TranslationResult:
 def translate(
     policy: AsmPolicy,
     decisions: DecisionSet,
-    namespace: str,
+    namespaces: str | dict[str, str],
     name_override: str | None = None,
 ) -> TranslationResult:
-    """Run all four translators and return a unified result."""
+    """Run all four translators and return a unified result.
+
+    Args:
+        namespaces: Either a single namespace string (all objects) or a dict
+            mapping object keys to namespaces with a "default" fallback.
+    """
+    def _ns(key: str) -> str:
+        if isinstance(namespaces, str):
+            return namespaces
+        return namespaces.get(key, namespaces.get("default", "default"))
+
     return TranslationResult(
-        app_firewall=AppFirewallTranslator.translate(policy, namespace, name_override),
-        exclusion_policy=ExclusionPolicyTranslator.translate(policy, decisions, namespace, name_override),
-        service_policy=ServicePolicyTranslator.translate(policy, namespace, name_override),
+        app_firewall=AppFirewallTranslator.translate(policy, _ns("app_firewall"), name_override),
+        exclusion_policy=ExclusionPolicyTranslator.translate(policy, decisions, _ns("exclusion_policy"), name_override),
+        service_policy=ServicePolicyTranslator.translate(policy, _ns("service_policy"), name_override),
         http_lb_patch=HttpLbPatchTranslator.translate(policy),
     )

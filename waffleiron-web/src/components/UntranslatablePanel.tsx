@@ -27,7 +27,7 @@ export default function UntranslatablePanel({ untranslatable, botGaps }: Untrans
         Cannot Translate
       </h2>
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        These ASM features have no equivalent in XC WAF and will be omitted from the conversion.
+        These AWAF features have no equivalent in XC WAF and will be omitted from the conversion.
       </p>
 
       {unsupportedFeatures.length > 0 && (

@@ -184,13 +184,15 @@ async def translate_conversion(request: Request, conversion_id: str):
     """Translate the parsed ASM policy using submitted decisions."""
     session = _get_session(request, conversion_id)
     body = await request.json()
-    namespace = body.get("namespace", "default")
     name_override = body.get("name")
+
+    # Accept per-object namespaces or a single namespace for all
+    namespaces = body.get("namespaces", body.get("namespace", "default"))
 
     if session.asm_policy is None:
         raise HTTPException(status_code=400, detail="No policy parsed yet")
 
-    result = translate(session.asm_policy, session.decisions, namespace, name_override)
+    result = translate(session.asm_policy, session.decisions, namespaces, name_override)
     session.translation = result
     session.status = "translated"
 

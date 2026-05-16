@@ -253,7 +253,7 @@ class TestServicePolicyMetadata:
     def test_metadata_name_suffix(self, mature_policy):
         result = ServicePolicyTranslator.translate(mature_policy, namespace="ns")
         name = result["metadata"]["name"]
-        assert name.endswith("-service-policy")
+        assert name.endswith("-svc")
 
     def test_metadata_namespace(self, mature_policy):
         result = ServicePolicyTranslator.translate(mature_policy, namespace="my-namespace")

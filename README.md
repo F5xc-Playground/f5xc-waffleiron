@@ -1,12 +1,12 @@
 # WaffleIron
 
-Convert BIG-IP ASM/Advanced WAF policy exports to F5 Distributed Cloud (XC) WAF configurations.
+Convert BIG-IP Advanced WAF (AWAF) policy exports to F5 Distributed Cloud (XC) WAF configurations.
 
 ## Overview
 
-BIG-IP ASM policies cannot be directly imported into F5 XC WAF. The engines share ~8,000 attack signatures but use different policy models. Migration requires manual recreation of WAF configurations — error-prone and time-consuming for mature policies with extensive tuning.
+BIG-IP AWAF policies cannot be directly imported into F5 XC WAF. The engines share ~8,000 attack signatures but use different policy models. Migration requires manual recreation of WAF configurations — error-prone and time-consuming for mature policies with extensive tuning.
 
-WaffleIron parses ASM XML/JSON exports, analyzes what can and can't translate, guides the user through decisions, and produces XC API-ready JSON objects.
+WaffleIron parses AWAF XML/JSON exports, analyzes what can and can't translate, guides the user through decisions, and produces XC API-ready JSON objects.
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ docker compose up -d --build
 
 ### 1. Upload
 
-Upload an ASM/AWAF XML or JSON policy export. The policy is parsed and analyzed automatically.
+Upload an AWAF XML or JSON policy export. The policy is parsed and analyzed automatically.
 
 ### 2. Analysis
 
@@ -37,7 +37,7 @@ Review the analysis results:
 - **Policy info** — name, enforcement mode, signature accuracy, and enabled features with color-coded translation status (green = fully translates, yellow = partially translates, red = no XC equivalent)
 - **Summary** — counts of directly translated, translated-with-loss, decisions-required, and untranslatable items
 - **Alarm-only decisions** — signatures and violations in alarm-only mode require a decision: enforce in XC, exclude from detection, or defer
-- **Translated with loss** — features like session tracking and brute force that exist in ASM and have related XC capabilities but can't be automatically migrated
+- **Translated with loss** — features like session tracking and brute force that exist in AWAF and have related XC capabilities but can't be automatically migrated
 - **Cannot translate** — custom signatures and bot defense actions with no XC equivalent
 
 ### 3. Export
@@ -52,15 +52,15 @@ Configure the output namespace and policy name, then generate XC objects:
 | Object | Contents |
 |--------|----------|
 | `app_firewall` | WAF policy: enforcement mode, signature sets, violations, bot protection, blocking page, data anonymization |
-| `waf_exclusion_policy` | Per-signature/path exclusion rules from ASM tuning and alarm-only decisions |
+| `waf_exclusion_policy` | Per-signature/path exclusion rules from AWAF tuning and alarm-only decisions |
 | `service_policy` | IP allow/deny lists, geolocation blocks, IP intelligence threat categories |
 | `http_lb_patch` | CSRF and Data Guard settings (applied at the load balancer level) |
 
 ## Key Constraints
 
-1. **No alarm-only in XC.** ASM supports per-signature "detect and log without blocking." XC is binary — enforce or exclude. The tool flags alarm-only items for user decision.
+1. **No alarm-only in XC.** AWAF supports per-signature "detect and log without blocking." XC is binary — enforce or exclude. The tool flags alarm-only items for user decision.
 
-2. **No positive security model in XC.** ASM URL/parameter/file-type entities with value validation have no XC equivalent. These appear in the gap report.
+2. **No positive security model in XC.** AWAF URL/parameter/file-type entities with value validation have no XC equivalent. These appear in the gap report.
 
 3. **Same engine, different model.** The translation is about policy structure, not detection capability.
 
@@ -88,7 +88,7 @@ make test
 | Document | Purpose |
 |----------|---------|
 | [docs/architecture.md](docs/architecture.md) | Tool architecture and processing pipeline |
-| [docs/asm-xml-schema.md](docs/asm-xml-schema.md) | ASM XML export structure and field reference |
+| [docs/asm-xml-schema.md](docs/asm-xml-schema.md) | AWAF XML export structure and field reference |
 | [docs/xc-target-objects.md](docs/xc-target-objects.md) | XC API objects and schemas |
 | [docs/field-mapping.md](docs/field-mapping.md) | Field-by-field translation rules |
 | [docs/gaps-and-decisions.md](docs/gaps-and-decisions.md) | What can't translate and user decisions |

@@ -84,6 +84,7 @@ export interface PushResult {
   object_type: string;
   success: boolean;
   error?: string;
+  namespace?: string;
 }
 
 export interface XCStatus {
@@ -98,7 +99,6 @@ export interface DecisionRequest {
 }
 
 export interface PushRequest {
-  namespace: string;
   tenant_url?: string;
   api_token?: string;
   objects: string[];
