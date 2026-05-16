@@ -107,14 +107,14 @@ export default function ReviewView() {
 
     try {
       const nsArg = advancedNs ? perObjectNs : namespace;
-      const result = await runTranslation(sessionId, nsArg, policyName || undefined);
+      const result = await runTranslation(sessionId, nsArg, policyName || undefined, state.overrides);
       dispatch({ type: 'TRANSLATION_COMPLETE', outputs: result });
     } catch (err) {
       setTranslateError(err instanceof Error ? err.message : 'Translation failed.');
     } finally {
       setTranslating(false);
     }
-  }, [sessionId, namespace, advancedNs, perObjectNs, policyName, dispatch]);
+  }, [sessionId, namespace, advancedNs, perObjectNs, policyName, state.overrides, dispatch]);
 
   const handleDownloadZip = useCallback(async () => {
     if (!outputs || !sessionId) return;

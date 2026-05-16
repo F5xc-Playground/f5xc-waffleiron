@@ -5,6 +5,7 @@ import type {
   TranslationOutputs,
   PushResult,
   XCStatus,
+  PolicyOverrides,
 } from './types';
 
 const BASE = '/api/v1';
@@ -36,11 +37,13 @@ export async function runTranslation(
   id: string,
   namespaces: string | Record<string, string>,
   name?: string,
+  overrides?: PolicyOverrides,
 ): Promise<TranslationOutputs> {
   const body: Record<string, unknown> = typeof namespaces === 'string'
     ? { namespace: namespaces }
     : { namespaces };
   if (name) body.name = name;
+  if (overrides && Object.keys(overrides).length > 0) body.overrides = overrides;
   const res = await fetch(`${BASE}/conversions/${id}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

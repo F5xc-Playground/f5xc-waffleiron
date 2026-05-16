@@ -10,6 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from waffleiron.model import AsmPolicy, CustomSignature, SignatureOverride
+from waffleiron.translators.mappings import (
+    ASM_IP_INTEL_TO_XC,
+    find_unsupported_blocking_page_vars,
+)
 
 # ---------------------------------------------------------------------------
 # Limits — thresholds that trigger warnings
@@ -78,6 +82,22 @@ class BotGap:
 
 
 @dataclass
+class BlockingPageGap:
+    """A blocking page template variable that has no XC equivalent."""
+
+    variable: str
+    reason: str
+
+
+@dataclass
+class IpIntelGap:
+    """An IP intelligence category that has no XC equivalent."""
+
+    category: str
+    reason: str
+
+
+@dataclass
 class LimitWarning:
     """A warning that a resource count exceeds XC limits."""
 
@@ -107,6 +127,8 @@ class AnalysisResult:
     positive_security: PositiveSecuritySummary = field(default_factory=PositiveSecuritySummary)
     untranslatable: UntranslatableSummary = field(default_factory=UntranslatableSummary)
     bot_gaps: list[BotGap] = field(default_factory=list)
+    blocking_page_gaps: list[BlockingPageGap] = field(default_factory=list)
+    ip_intel_gaps: list[IpIntelGap] = field(default_factory=list)
     warnings: list[LimitWarning] = field(default_factory=list)
     summary: ConversionSummary = field(default_factory=ConversionSummary)
 
@@ -213,6 +235,34 @@ def _collect_bot_gaps(policy: AsmPolicy) -> list[BotGap]:
                     category=cat.name,
                     asm_action=cat.action,
                     reason=f"XC WAF has no equivalent of '{cat.action}' for bot categories",
+                )
+            )
+    return gaps
+
+
+def _collect_blocking_page_gaps(policy: AsmPolicy) -> list[BlockingPageGap]:
+    """Detect unsupported template variables in the custom blocking page."""
+    if not policy.blocking_page.enabled or not policy.blocking_page.custom_html:
+        return []
+    unsupported = find_unsupported_blocking_page_vars(policy.blocking_page.custom_html)
+    return [
+        BlockingPageGap(
+            variable=var,
+            reason=f"XC WAF does not support the template variable {var}",
+        )
+        for var in unsupported
+    ]
+
+
+def _collect_ip_intel_gaps(policy: AsmPolicy) -> list[IpIntelGap]:
+    """Find IP intelligence categories that cannot be mapped to XC."""
+    gaps: list[IpIntelGap] = []
+    for category in policy.ip_intelligence.categories:
+        if category.name not in ASM_IP_INTEL_TO_XC:
+            gaps.append(
+                IpIntelGap(
+                    category=category.name,
+                    reason=f"No XC IPThreatCategory equivalent for '{category.name}'",
                 )
             )
     return gaps
@@ -363,6 +413,8 @@ def analyze(policy: AsmPolicy) -> AnalysisResult:
     pos_sec = _build_positive_security(policy)
     untranslatable = _build_untranslatable(policy)
     bot_gaps = _collect_bot_gaps(policy)
+    blocking_page_gaps = _collect_blocking_page_gaps(policy)
+    ip_intel_gaps = _collect_ip_intel_gaps(policy)
     warnings = _check_limits(policy)
     summary = _build_summary(alarm_sigs, alarm_viols, bot_gaps, untranslatable, policy)
 
@@ -372,6 +424,8 @@ def analyze(policy: AsmPolicy) -> AnalysisResult:
         positive_security=pos_sec,
         untranslatable=untranslatable,
         bot_gaps=bot_gaps,
+        blocking_page_gaps=blocking_page_gaps,
+        ip_intel_gaps=ip_intel_gaps,
         warnings=warnings,
         summary=summary,
     )

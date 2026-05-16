@@ -5,6 +5,7 @@ import type {
   TranslationOutputs,
   PushResult,
   XCStatus,
+  PolicyOverrides,
 } from '../types';
 
 export type WizardStep = 'upload' | 'analysis' | 'review';
@@ -14,6 +15,7 @@ export interface ConversionState {
   sessionId: string | null;
   session: ConversionSession | null;
   analysis: AnalysisResult | null;
+  overrides: PolicyOverrides;
   outputs: TranslationOutputs | null;
   pushResults: PushResult[] | null;
   xcStatus: XCStatus | null;
@@ -22,6 +24,7 @@ export interface ConversionState {
 type ConversionAction =
   | { type: 'UPLOAD_SUCCESS'; session: ConversionSession }
   | { type: 'ANALYSIS_LOADED'; analysis: AnalysisResult }
+  | { type: 'SET_OVERRIDES'; overrides: PolicyOverrides }
   | { type: 'TRANSLATION_COMPLETE'; outputs: TranslationOutputs }
   | { type: 'OUTPUT_EDITED'; outputs: TranslationOutputs }
   | { type: 'PUSH_COMPLETE'; results: PushResult[] }
@@ -34,6 +37,7 @@ const initialState: ConversionState = {
   sessionId: null,
   session: null,
   analysis: null,
+  overrides: {},
   outputs: null,
   pushResults: null,
   xcStatus: null,
@@ -52,6 +56,11 @@ function conversionReducer(state: ConversionState, action: ConversionAction): Co
       return {
         ...state,
         analysis: action.analysis,
+      };
+    case 'SET_OVERRIDES':
+      return {
+        ...state,
+        overrides: action.overrides,
       };
     case 'TRANSLATION_COMPLETE':
       return {

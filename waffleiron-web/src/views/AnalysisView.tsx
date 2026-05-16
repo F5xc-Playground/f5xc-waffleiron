@@ -1,12 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
-import PolicyInfoCard from '../components/PolicyInfoCard';
 import SummaryCards from '../components/SummaryCards';
 import DecisionsTable from '../components/DecisionsTable';
-import TranslatedWithLossPanel from '../components/TranslatedWithLossPanel';
-import UntranslatablePanel from '../components/UntranslatablePanel';
 import { submitDecisions } from '../api';
 import { useConversion } from '../context/ConversionContext';
-import type { DecisionRequest } from '../types';
+import type { DecisionRequest, PolicyOverrides } from '../types';
 
 export default function AnalysisView() {
   const { state, dispatch } = useConversion();
@@ -22,6 +19,10 @@ export default function AnalysisView() {
   const handleDecisionsChange = useCallback((decisions: DecisionRequest) => {
     decisionsRef.current = decisions;
   }, []);
+
+  const handleOverridesChange = useCallback((overrides: PolicyOverrides) => {
+    dispatch({ type: 'SET_OVERRIDES', overrides });
+  }, [dispatch]);
 
   const handleContinue = useCallback(async () => {
     if (!sessionId) return;
@@ -51,16 +52,21 @@ export default function AnalysisView() {
   return (
     <div className="flex-1 px-6 py-4">
       <div className="mx-auto max-w-5xl space-y-6">
-        {/* Policy Info */}
-        <PolicyInfoCard info={analysis.policy_info} botGaps={analysis.bot_gaps} />
+        <SummaryCards
+          summary={analysis.summary}
+          policyInfo={analysis.policy_info}
+          overrides={state.overrides}
+          onOverridesChange={handleOverridesChange}
+          botGaps={analysis.bot_gaps}
+          blockingPageGaps={analysis.blocking_page_gaps ?? []}
+          ipIntelGaps={analysis.ip_intel_gaps ?? []}
+          untranslatable={analysis.untranslatable}
+          warnings={analysis.warnings}
+        />
 
-        {/* Summary */}
-        <SummaryCards summary={analysis.summary} />
-
-        {/* Decisions table */}
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            Alarm-Only Decisions
+            Alarm-Only Overrides
           </h2>
           <DecisionsTable
             signatures={analysis.alarm_only_signatures}
@@ -68,20 +74,6 @@ export default function AnalysisView() {
             onDecisionsChange={handleDecisionsChange}
           />
         </div>
-
-        {/* Translated with Loss */}
-        <TranslatedWithLossPanel
-          untranslatable={analysis.untranslatable}
-          warnings={analysis.warnings}
-        />
-
-        {/* Cannot Translate */}
-        {analysis.summary.cannot_translate > 0 && (
-          <UntranslatablePanel
-            untranslatable={analysis.untranslatable}
-            botGaps={analysis.bot_gaps}
-          />
-        )}
 
         {/* Continue to Export */}
         <div className="flex items-center justify-end gap-4">

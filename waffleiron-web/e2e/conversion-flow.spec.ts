@@ -39,18 +39,18 @@ test.describe('Conversion flow', () => {
 
     // Should auto-advance to Analysis step and show policy info
     await expect(page.getByText('mature-tuned')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('blocking', { exact: true })).toBeVisible();
+    await expect(page.locator('select').first()).toHaveValue('blocking');
 
     // Summary cards should appear
-    await expect(page.getByText('Total Features')).toBeVisible();
-    await expect(page.getByText('Directly Translated')).toBeVisible();
+    await expect(page.getByText('translation coverage')).toBeVisible();
+    await expect(page.getByText('Policy Overview')).toBeVisible();
   });
 
   test('analysis shows alarm-only decisions table', async ({ page }) => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(POLICY_FILE);
 
-    await expect(page.getByText('Alarm-Only Decisions')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Alarm-Only Overrides')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Signature').first()).toBeVisible();
   });
 
@@ -58,7 +58,7 @@ test.describe('Conversion flow', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(POLICY_FILE);
 
-    await expect(page.getByText('Translates to XC')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Translated')).toBeVisible({ timeout: 10_000 });
   });
 
   test('export page has namespace and policy name fields', async ({ page }) => {
@@ -100,7 +100,7 @@ test.describe('Conversion flow', () => {
 
     // Click "Analysis" step to go back
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await expect(page.getByText('Alarm-Only Decisions')).toBeVisible();
+    await expect(page.getByText('Alarm-Only Overrides')).toBeVisible();
 
     // Click "Upload" step to go back further
     await page.getByRole('button', { name: 'Upload' }).click();
