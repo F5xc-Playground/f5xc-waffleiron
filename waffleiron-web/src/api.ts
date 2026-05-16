@@ -3,9 +3,9 @@ import type {
   AnalysisResult,
   DecisionRequest,
   TranslationOutputs,
-  PushRequest,
   PushResult,
   XCStatus,
+  PolicyOverrides,
 } from './types';
 
 const BASE = '/api/v1';
@@ -33,9 +33,17 @@ export async function submitDecisions(id: string, decisions: DecisionRequest): P
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function runTranslation(id: string, namespace: string, name?: string): Promise<TranslationOutputs> {
-  const body: Record<string, string> = { namespace };
+export async function runTranslation(
+  id: string,
+  namespaces: string | Record<string, string>,
+  name?: string,
+  overrides?: PolicyOverrides,
+): Promise<TranslationOutputs> {
+  const body: Record<string, unknown> = typeof namespaces === 'string'
+    ? { namespace: namespaces }
+    : { namespaces };
   if (name) body.name = name;
+  if (overrides && Object.keys(overrides).length > 0) body.overrides = overrides;
   const res = await fetch(`${BASE}/conversions/${id}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -59,11 +67,14 @@ export async function getReport(id: string, format: 'json' | 'markdown'): Promis
   return format === 'json' ? res.json() : res.text();
 }
 
-export async function pushToXC(id: string, request: PushRequest): Promise<PushResult[]> {
+export async function pushToXC(id: string, objects: string[], tenantUrl?: string, apiToken?: string): Promise<PushResult[]> {
+  const body: Record<string, unknown> = { objects };
+  if (tenantUrl) body.tenant_url = tenantUrl;
+  if (apiToken) body.api_token = apiToken;
   const res = await fetch(`${BASE}/conversions/${id}/push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();

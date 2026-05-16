@@ -122,7 +122,7 @@ class TestJsonReport:
 class TestMarkdownReport:
     def test_has_header(self, analysis_result, decisions):
         report = generate_report(analysis_result, decisions, format=ReportFormat.MARKDOWN)
-        assert "# ASM" in report
+        assert "# AWAF" in report
 
     def test_has_summary_section(self, analysis_result, decisions):
         report = generate_report(analysis_result, decisions, format=ReportFormat.MARKDOWN)

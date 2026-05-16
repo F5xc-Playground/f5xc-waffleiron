@@ -11,7 +11,7 @@ from conftest import make_policy_with_disabled_sig_set, make_policy_with_disable
 class TestMetadata:
     def test_name_and_namespace(self, minimal_policy):
         result = AppFirewallTranslator.translate(minimal_policy, namespace="my-ns")
-        assert result["metadata"]["name"] == "test-policy"
+        assert result["metadata"]["name"] == "test-policy-waf"
         assert result["metadata"]["namespace"] == "my-ns"
 
     def test_name_sanitized_to_lowercase(self, minimal_policy):

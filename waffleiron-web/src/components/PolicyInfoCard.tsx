@@ -1,13 +1,15 @@
-import type { PolicyInfo, BotGap } from '../types';
+import type { PolicyInfo, BotGap, BlockingPageGap, IpIntelGap } from '../types';
 
 interface PolicyInfoCardProps {
   info: PolicyInfo;
   botGaps: BotGap[];
+  blockingPageGaps: BlockingPageGap[];
+  ipIntelGaps: IpIntelGap[];
 }
 
 type TranslationStatus = 'full' | 'partial' | 'none';
 
-const FEATURES: { key: string; label: string; base: TranslationStatus }[] = [
+const PROTECTIONS: { key: string; label: string; base: TranslationStatus }[] = [
   { key: 'blocking_page', label: 'Custom Blocking Page', base: 'full' },
   { key: 'bot_defense', label: 'Bot Defense', base: 'full' },
   { key: 'geolocation', label: 'Geolocation', base: 'full' },
@@ -18,31 +20,22 @@ const FEATURES: { key: string; label: string; base: TranslationStatus }[] = [
   { key: 'session_tracking', label: 'Session Tracking', base: 'none' },
 ];
 
-const STATUS_STYLES: Record<TranslationStatus, { pill: string; icon: string }> = {
-  full: {
-    pill: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    icon: 'M5 13l4 4L19 7',
-  },
-  partial: {
-    pill: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    icon: 'M12 9v2m0 4h.01',
-  },
-  none: {
-    pill: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    icon: 'M6 18L18 6M6 6l12 12',
-  },
+const STATUS_STYLES: Record<TranslationStatus, string> = {
+  full: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  partial: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  none: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
 const STATUS_LABELS: Record<TranslationStatus, string> = {
-  full: 'Translates to XC',
+  full: 'Fully translates',
   partial: 'Partially translates',
-  none: 'No XC equivalent',
+  none: 'Cannot translate',
 };
 
-export default function PolicyInfoCard({ info, botGaps }: PolicyInfoCardProps) {
+export default function PolicyInfoCard({ info, botGaps, blockingPageGaps, ipIntelGaps }: PolicyInfoCardProps) {
   const isBlocking = info.enforcement_mode === 'blocking';
 
-  const enabledFeatures = FEATURES
+  const enabledProtections = PROTECTIONS
     .filter((f) => info.features[f.key])
     .map((f) => {
       let status = f.base;
@@ -52,15 +45,23 @@ export default function PolicyInfoCard({ info, botGaps }: PolicyInfoCardProps) {
         status = 'partial';
         const actions = [...new Set(botGaps.map((g) => g.asm_action))].join(', ');
         note = `${actions} actions have no XC equivalent`;
+      } else if (f.key === 'blocking_page' && blockingPageGaps.length > 0) {
+        status = 'partial';
+        const vars = blockingPageGaps.map((g) => g.variable).join(', ');
+        note = `Unsupported template variables: ${vars}`;
+      } else if (f.key === 'ip_intelligence' && ipIntelGaps.length > 0) {
+        status = 'partial';
+        const cats = ipIntelGaps.map((g) => g.category).join(', ');
+        note = `Unmapped categories: ${cats}`;
       }
 
       return { ...f, status, note };
     });
 
   const grouped = {
-    full: enabledFeatures.filter((f) => f.status === 'full'),
-    partial: enabledFeatures.filter((f) => f.status === 'partial'),
-    none: enabledFeatures.filter((f) => f.status === 'none'),
+    full: enabledProtections.filter((f) => f.status === 'full'),
+    partial: enabledProtections.filter((f) => f.status === 'partial'),
+    none: enabledProtections.filter((f) => f.status === 'none'),
   };
 
   return (
@@ -106,13 +107,11 @@ export default function PolicyInfoCard({ info, botGaps }: PolicyInfoCardProps) {
         </div>
       </div>
 
-      {enabledFeatures.length > 0 && (
+      {enabledProtections.length > 0 && (
         <div className="mt-4 space-y-2">
           {(['full', 'partial', 'none'] as TranslationStatus[]).map((status) => {
             const items = grouped[status];
             if (items.length === 0) return null;
-            const styles = STATUS_STYLES[status];
-
             return (
               <div key={status}>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -122,16 +121,83 @@ export default function PolicyInfoCard({ info, botGaps }: PolicyInfoCardProps) {
                   {items.map((f) => (
                     <span
                       key={f.key}
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles.pill}`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
                       title={f.note}
                     >
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d={styles.icon} />
-                      </svg>
                       {f.label}
                     </span>
                   ))}
                 </div>
+                {status === 'partial' && botGaps.length > 0 && (
+                  <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 dark:text-gray-400">
+                          <th className="pb-1 font-medium">Category</th>
+                          <th className="pb-1 font-medium">AWAF Action</th>
+                          <th className="pb-1 font-medium">Gap</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700 dark:text-gray-300">
+                        {botGaps.map((gap) => (
+                          <tr key={gap.category}>
+                            <td className="py-0.5 font-medium">{gap.category}</td>
+                            <td className="py-0.5">
+                              <code className="rounded bg-yellow-100 px-1 py-0.5 text-xs dark:bg-yellow-900/30">
+                                {gap.asm_action}
+                              </code>
+                            </td>
+                            <td className="py-0.5 text-gray-500 dark:text-gray-400">{gap.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {status === 'partial' && blockingPageGaps.length > 0 && (
+                  <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 dark:text-gray-400">
+                          <th className="pb-1 font-medium">Variable</th>
+                          <th className="pb-1 font-medium">Gap</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700 dark:text-gray-300">
+                        {blockingPageGaps.map((gap) => (
+                          <tr key={gap.variable}>
+                            <td className="py-0.5">
+                              <code className="rounded bg-yellow-100 px-1 py-0.5 text-xs dark:bg-yellow-900/30">
+                                {gap.variable}
+                              </code>
+                            </td>
+                            <td className="py-0.5 text-gray-500 dark:text-gray-400">{gap.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {status === 'partial' && ipIntelGaps.length > 0 && (
+                  <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 dark:text-gray-400">
+                          <th className="pb-1 font-medium">Category</th>
+                          <th className="pb-1 font-medium">Gap</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700 dark:text-gray-300">
+                        {ipIntelGaps.map((gap) => (
+                          <tr key={gap.category}>
+                            <td className="py-0.5 font-medium">{gap.category}</td>
+                            <td className="py-0.5 text-gray-500 dark:text-gray-400">{gap.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -15,7 +15,7 @@ def test_full_pipeline(fixtures_path):
     decisions = DecisionSet()
     decisions.bulk_set_signatures(AlarmOnlyAction.EXCLUDE)
 
-    result = translate(policy, decisions, namespace="test-ns")
+    result = translate(policy, decisions, "test-ns")
     assert result.app_firewall is not None
     assert result.exclusion_policy is not None
 
@@ -39,7 +39,7 @@ def test_minimal_pipeline(fixtures_path):
     analysis = analyze(policy)
     decisions = DecisionSet()
 
-    result = translate(policy, decisions, namespace="ns")
+    result = translate(policy, decisions, "ns")
     assert result.app_firewall is not None
     assert result.service_policy is None
     assert result.http_lb_patch is None

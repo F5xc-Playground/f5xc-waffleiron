@@ -4,6 +4,11 @@ export interface ConversionSession {
   policy_name: string;
 }
 
+export interface SignatureSetInfo {
+  name: string;
+  enabled: boolean;
+}
+
 export interface PolicyInfo {
   name: string;
   enforcement_mode: 'blocking' | 'transparent';
@@ -13,6 +18,7 @@ export interface PolicyInfo {
   threat_campaigns_enabled: boolean;
   features: Record<string, boolean>;
   entity_counts: Record<string, number>;
+  signature_sets: SignatureSetInfo[];
 }
 
 export interface AnalysisResult {
@@ -22,6 +28,8 @@ export interface AnalysisResult {
   alarm_only_violations: AlarmOnlyViolation[];
   untranslatable: UntranslatableSummary;
   bot_gaps: BotGap[];
+  blocking_page_gaps: BlockingPageGap[];
+  ip_intel_gaps: IpIntelGap[];
   warnings: LimitWarning[];
 }
 
@@ -53,6 +61,16 @@ export interface BotGap {
   reason: string;
 }
 
+export interface BlockingPageGap {
+  variable: string;
+  reason: string;
+}
+
+export interface IpIntelGap {
+  category: string;
+  reason: string;
+}
+
 export interface ConversionSummary {
   total: number;
   directly_translated: number;
@@ -65,12 +83,12 @@ export interface AlarmOnlySignature {
   sig_id: number;
   description: string;
   scope: string;
-  action: 'exclude' | 'enforce' | 'defer';
+  action: 'exclude' | 'enforce';
 }
 
 export interface AlarmOnlyViolation {
   violation_name: string;
-  action: 'disable' | 'enforce' | 'defer';
+  action: 'disable' | 'enforce';
 }
 
 export interface TranslationOutputs {
@@ -84,6 +102,7 @@ export interface PushResult {
   object_type: string;
   success: boolean;
   error?: string;
+  namespace?: string;
 }
 
 export interface XCStatus {
@@ -97,8 +116,14 @@ export interface DecisionRequest {
   alarm_only_violations?: Array<{ violation_name: string; action: string }>;
 }
 
+export interface PolicyOverrides {
+  enforcement_mode?: 'blocking' | 'transparent';
+  signature_accuracy?: string;
+  staging_enabled?: boolean;
+  threat_campaigns_enabled?: boolean;
+}
+
 export interface PushRequest {
-  namespace: string;
   tenant_url?: string;
   api_token?: string;
   objects: string[];

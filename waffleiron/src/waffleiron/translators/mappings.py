@@ -89,8 +89,61 @@ ASM_BOT_CATEGORY_TO_XC: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
+# AWAF IP Intelligence category → XC IPThreatCategory enum
+# ---------------------------------------------------------------------------
+ASM_IP_INTEL_TO_XC: dict[str, str] = {
+    "botnets": "BOTNETS",
+    "scanners": "SCANNERS",
+    "spam_sources": "SPAM_SOURCES",
+    "spam-sources": "SPAM_SOURCES",
+    "phishing": "PHISHING",
+    "denial_of_service": "DENIAL_OF_SERVICE",
+    "denial-of-service": "DENIAL_OF_SERVICE",
+    "windows_exploits": "WINDOWS_EXPLOITS",
+    "windows-exploits": "WINDOWS_EXPLOITS",
+    "web_attacks": "WEB_ATTACKS",
+    "web-attacks": "WEB_ATTACKS",
+    "proxy": "PROXY",
+    "tor_proxy": "TOR_PROXY",
+    "tor-proxy": "TOR_PROXY",
+    "mobile_threats": "MOBILE_THREATS",
+    "mobile-threats": "MOBILE_THREATS",
+    "infected_sources": "REPUTATION",
+    "infected-sources": "REPUTATION",
+}
+
+# All valid XC IPThreatCategory enum values (from ves.io.schema.policy protobuf)
+XC_IP_THREAT_CATEGORIES: frozenset[str] = frozenset({
+    "SPAM_SOURCES",
+    "WINDOWS_EXPLOITS",
+    "WEB_ATTACKS",
+    "BOTNETS",
+    "SCANNERS",
+    "REPUTATION",
+    "PHISHING",
+    "PROXY",
+    "MOBILE_THREATS",
+    "TOR_PROXY",
+    "DENIAL_OF_SERVICE",
+    "NETWORK",
+})
+
+
+# ---------------------------------------------------------------------------
 # Blocking-page template variable translation
 # ---------------------------------------------------------------------------
+import re
+
+_AWAF_VAR_PATTERN = re.compile(r"<%[^%]+%>")
+_SUPPORTED_AWAF_VARS = frozenset({"<%TS.request.ID()%>"})
+
+
 def translate_blocking_page_vars(html: str) -> str:
-    """Replace ASM blocking-page template variables with XC equivalents."""
+    """Replace AWAF blocking-page template variables with XC equivalents."""
     return html.replace("<%TS.request.ID()%>", "{{request_id}}")
+
+
+def find_unsupported_blocking_page_vars(html: str) -> list[str]:
+    """Return any AWAF template variables that have no XC equivalent."""
+    all_vars = set(_AWAF_VAR_PATTERN.findall(html))
+    return sorted(all_vars - _SUPPORTED_AWAF_VARS)

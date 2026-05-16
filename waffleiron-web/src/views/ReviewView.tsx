@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
 import { useConversion } from '../context/ConversionContext';
-import { getReport, runTranslation } from '../api';
+import { getReport, getXCStatus, listNamespaces, runTranslation } from '../api';
 import JsonViewer from '../components/JsonViewer';
 import GapReport from '../components/GapReport';
 import PushModal from '../components/PushModal';
@@ -15,6 +15,12 @@ const OBJECT_TYPES = [
 ] as const;
 
 type OutputKey = (typeof OBJECT_TYPES)[number]['key'];
+
+const NAMESPACE_OBJECTS = [
+  { key: 'app_firewall', label: 'App Firewall' },
+  { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
+  { key: 'service_policy', label: 'Service Policy' },
+] as const;
 
 function getAvailableTabs(outputs: TranslationOutputs) {
   return OBJECT_TYPES.filter(
@@ -33,7 +39,39 @@ export default function ReviewView() {
 
   const defaultName = state.analysis?.policy_info.name ?? '';
   const [policyName, setPolicyName] = useState(defaultName);
-  const [namespace, setNamespace] = useState('default');
+  const [namespace, setNamespace] = useState('shared');
+  const [advancedNs, setAdvancedNs] = useState(false);
+  const [perObjectNs, setPerObjectNs] = useState<Record<string, string>>({
+    app_firewall: 'shared',
+    exclusion_policy: 'shared',
+    service_policy: 'shared',
+  });
+
+  // Namespace loading from XC tenant
+  const [xcNamespaces, setXcNamespaces] = useState<string[] | null>(null);
+  const [nsLoading, setNsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await getXCStatus();
+        if (cancelled) return;
+        dispatch({ type: 'XC_STATUS_LOADED', status });
+        if (status.configured) {
+          const ns = await listNamespaces();
+          if (cancelled) return;
+          const withShared = ns.includes('shared') ? ns : ['shared', ...ns];
+          setXcNamespaces(withShared);
+        }
+      } catch {
+        // Fall back to text inputs
+      } finally {
+        if (!cancelled) setNsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [dispatch]);
 
   useEffect(() => {
     if (defaultName && !policyName) setPolicyName(defaultName);
@@ -55,6 +93,12 @@ export default function ReviewView() {
     ? outputs[activeTab as keyof TranslationOutputs]
     : undefined;
 
+  const handleObjectSave = useCallback((objectType: string, updated: object) => {
+    if (!outputs) return;
+    const newOutputs = { ...outputs, [objectType]: updated };
+    dispatch({ type: 'OUTPUT_EDITED', outputs: newOutputs });
+  }, [outputs, dispatch]);
+
   const handleTranslate = useCallback(async () => {
     if (!sessionId) return;
 
@@ -62,14 +106,15 @@ export default function ReviewView() {
     setTranslating(true);
 
     try {
-      const result = await runTranslation(sessionId, namespace, policyName || undefined);
+      const nsArg = advancedNs ? perObjectNs : namespace;
+      const result = await runTranslation(sessionId, nsArg, policyName || undefined, state.overrides);
       dispatch({ type: 'TRANSLATION_COMPLETE', outputs: result });
     } catch (err) {
       setTranslateError(err instanceof Error ? err.message : 'Translation failed.');
     } finally {
       setTranslating(false);
     }
-  }, [sessionId, namespace, policyName, dispatch]);
+  }, [sessionId, namespace, advancedNs, perObjectNs, policyName, state.overrides, dispatch]);
 
   const handleDownloadZip = useCallback(async () => {
     if (!outputs || !sessionId) return;
@@ -137,37 +182,124 @@ export default function ReviewView() {
                 htmlFor="policyName"
                 className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Policy Name
+                Base Name
               </label>
               <input
                 id="policyName"
                 type="text"
                 value={policyName}
                 onChange={(e) => setPolicyName(e.target.value)}
-                placeholder="e.g. my-waf-policy"
+                placeholder="e.g. my-policy"
                 className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
               />
               <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                Used for XC object names (auto-sanitized)
+                Base for XC object names (auto-sanitized)
               </p>
             </div>
-            <div>
-              <label
-                htmlFor="namespace"
-                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Namespace
-              </label>
-              <input
-                id="namespace"
-                type="text"
-                value={namespace}
-                onChange={(e) => setNamespace(e.target.value)}
-                placeholder="e.g. my-namespace"
-                className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
-              />
-            </div>
+            {!advancedNs && (
+              <div>
+                <label
+                  htmlFor="namespace"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Namespace
+                </label>
+                {nsLoading ? (
+                  <div className="flex h-[38px] items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-400 dark:border-gray-600 dark:bg-gray-900">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Loading namespaces...
+                  </div>
+                ) : xcNamespaces ? (
+                  <select
+                    id="namespace"
+                    value={namespace}
+                    onChange={(e) => setNamespace(e.target.value)}
+                    className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                  >
+                    {xcNamespaces.map((ns) => (
+                      <option key={ns} value={ns}>{ns}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id="namespace"
+                    type="text"
+                    value={namespace}
+                    onChange={(e) => setNamespace(e.target.value)}
+                    placeholder="e.g. my-namespace"
+                    className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
+                  />
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Per-object namespace toggle */}
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={advancedNs}
+              onClick={() => {
+                setAdvancedNs(!advancedNs);
+                if (!advancedNs) {
+                  setPerObjectNs({
+                    app_firewall: namespace,
+                    exclusion_policy: namespace,
+                    service_policy: namespace,
+                  });
+                }
+              }}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${advancedNs ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${advancedNs ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Per-object namespaces
+            </span>
+          </div>
+
+          {advancedNs && (
+            <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+              <div className="space-y-2">
+                {NAMESPACE_OBJECTS.map((obj) => (
+                  <div key={obj.key} className="flex items-center gap-3">
+                    <span className="w-40 shrink-0 text-sm text-gray-700 dark:text-gray-300">
+                      {obj.label}
+                    </span>
+                    {xcNamespaces ? (
+                      <select
+                        value={perObjectNs[obj.key] ?? namespace}
+                        onChange={(e) =>
+                          setPerObjectNs((prev) => ({ ...prev, [obj.key]: e.target.value }))
+                        }
+                        className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                      >
+                        {xcNamespaces.map((ns) => (
+                          <option key={ns} value={ns}>{ns}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={perObjectNs[obj.key] ?? namespace}
+                        onChange={(e) =>
+                          setPerObjectNs((prev) => ({ ...prev, [obj.key]: e.target.value }))
+                        }
+                        placeholder="namespace"
+                        className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {translateError && (
             <div className="mt-4 rounded-md bg-red-50 px-4 py-3 dark:bg-red-900/20">
@@ -179,7 +311,7 @@ export default function ReviewView() {
             <button
               type="button"
               onClick={handleTranslate}
-              disabled={translating || !policyName.trim() || !namespace.trim()}
+              disabled={translating || !policyName.trim() || (!advancedNs && !namespace.trim())}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {translating ? (
@@ -285,6 +417,8 @@ export default function ReviewView() {
                     <JsonViewer
                       data={activeData}
                       title={tabs.find((t) => t.key === activeTab)?.label}
+                      objectType={activeTab}
+                      onSave={(updated) => handleObjectSave(activeTab, updated)}
                     />
                   )}
                 </div>

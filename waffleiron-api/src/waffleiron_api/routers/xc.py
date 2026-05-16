@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from waffleiron.xc_client.client import XCClient
 from waffleiron.xc_client.config import XCConfig
+from waffleiron_api.sessions import SessionStore
 
 router = APIRouter(tags=["xc"])
 
@@ -34,10 +35,17 @@ def _get_session(request: Request, conversion_id: str):
     return session
 
 
-def _make_xc_client(tenant_url: str, api_token: str) -> XCClient:
-    """Construct an XCClient from ad-hoc credentials."""
-    config = XCConfig(tenant_url=tenant_url, api_token=api_token, auth_method="token")
-    return XCClient(config)
+def _resolve_xc_client(request: Request, tenant_url: str | None = None, api_token: str | None = None) -> XCClient:
+    """Build an XCClient from explicit credentials or fall back to app-level config."""
+    if tenant_url and api_token:
+        config = XCConfig(tenant_url=tenant_url, api_token=api_token, auth_method="token")
+        return XCClient(config)
+
+    app_config = request.app.state.config.xc_config
+    if app_config is not None:
+        return XCClient(app_config)
+
+    raise HTTPException(status_code=400, detail="No XC credentials provided or configured")
 
 
 # ── GET /xc/status ─────────────────────────────────────────────────
@@ -61,10 +69,11 @@ async def xc_status(request: Request):
 async def xc_connect(request: Request):
     """Test connectivity to an XC tenant using provided credentials."""
     body = await request.json()
-    tenant_url = body["tenant_url"]
-    api_token = body["api_token"]
-
-    xc_client = _make_xc_client(tenant_url, api_token)
+    xc_client = _resolve_xc_client(
+        request,
+        tenant_url=body.get("tenant_url"),
+        api_token=body.get("api_token"),
+    )
     connected = xc_client.check_connection()
     return {"connected": connected}
 
@@ -73,9 +82,9 @@ async def xc_connect(request: Request):
 
 
 @router.get("/xc/namespaces")
-async def xc_namespaces(tenant_url: str, api_token: str):
+async def xc_namespaces(request: Request, tenant_url: str | None = None, api_token: str | None = None):
     """List namespaces from the XC API, always prepending 'shared'."""
-    xc_client = _make_xc_client(tenant_url, api_token)
+    xc_client = _resolve_xc_client(request, tenant_url, api_token)
     items = xc_client.list_namespaces()
     names = [item["name"] for item in items]
     # Always include "shared" at the front
@@ -99,12 +108,13 @@ async def push_to_xc(request: Request, conversion_id: str):
         raise HTTPException(status_code=400, detail="Translation not yet performed")
 
     body = await request.json()
-    namespace = body["namespace"]
-    tenant_url = body["tenant_url"]
-    api_token = body["api_token"]
     object_types = body["objects"]
 
-    xc_client = _make_xc_client(tenant_url, api_token)
+    xc_client = _resolve_xc_client(
+        request,
+        tenant_url=body.get("tenant_url"),
+        api_token=body.get("api_token"),
+    )
 
     results = []
     for obj_type in object_types:
@@ -123,12 +133,15 @@ async def push_to_xc(request: Request, conversion_id: str):
             )
             continue
 
+        # Read namespace from the object's own metadata
+        obj_namespace = obj_data.get("metadata", {}).get("namespace", "default")
+
         try:
-            xc_client.create_object(resource, namespace, obj_data)
-            results.append({"object_type": obj_type, "success": True})
+            xc_client.create_object(resource, obj_namespace, obj_data)
+            results.append({"object_type": obj_type, "success": True, "namespace": obj_namespace})
         except Exception as e:
             results.append(
-                {"object_type": obj_type, "success": False, "error": str(e)}
+                {"object_type": obj_type, "success": False, "error": str(e), "namespace": obj_namespace}
             )
 
     return {"results": results}

@@ -19,6 +19,7 @@ from waffleiron import (
     translate,
 )
 from waffleiron.decisions import AlarmOnlyAction, SignatureDecision
+from waffleiron.model import AccuracyLevel, AsmPolicy, EnforcementMode
 
 from waffleiron_api.sessions import SessionStore
 
@@ -38,6 +39,40 @@ def _get_session(request: Request, conversion_id: str):
     if session is None:
         raise HTTPException(status_code=404, detail="Conversion session not found")
     return session
+
+
+_ACCURACY_MAP = {
+    "high": AccuracyLevel.HIGH,
+    "high_medium": AccuracyLevel.HIGH_MEDIUM,
+    "all": AccuracyLevel.ALL,
+}
+
+
+def _apply_overrides(policy: AsmPolicy, overrides: dict) -> AsmPolicy:
+    """Return a shallow copy of the policy with user overrides applied."""
+    policy = dataclasses.replace(policy)
+
+    if "enforcement_mode" in overrides:
+        policy.enforcement_mode = EnforcementMode(overrides["enforcement_mode"])
+
+    sig_changed = False
+    sigs = policy.signatures
+    if "signature_accuracy" in overrides:
+        level = _ACCURACY_MAP.get(overrides["signature_accuracy"])
+        if level is not None:
+            sigs = dataclasses.replace(sigs, accuracy_level=level)
+            sig_changed = True
+    if "staging_enabled" in overrides:
+        sigs = dataclasses.replace(sigs, staging_enabled=overrides["staging_enabled"])
+        sig_changed = True
+    if "threat_campaigns_enabled" in overrides:
+        sigs = dataclasses.replace(sigs, threat_campaigns_enabled=overrides["threat_campaigns_enabled"])
+        sig_changed = True
+
+    if sig_changed:
+        policy.signatures = sigs
+
+    return policy
 
 
 # ── POST /conversions — upload and parse ────────────────────────────
@@ -130,6 +165,10 @@ async def get_analysis(request: Request, conversion_id: str):
             "violations": len(policy.violations),
             "whitelist_ips": len(policy.whitelist_ips),
         },
+        "signature_sets": [
+            {"name": s.name, "enabled": s.enabled}
+            for s in policy.signature_sets
+        ],
     }
 
     return {
@@ -139,6 +178,8 @@ async def get_analysis(request: Request, conversion_id: str):
         "alarm_only_violations": [dataclasses.asdict(v) for v in result.alarm_only_violations],
         "untranslatable": dataclasses.asdict(result.untranslatable),
         "bot_gaps": [dataclasses.asdict(g) for g in result.bot_gaps],
+        "blocking_page_gaps": [dataclasses.asdict(g) for g in result.blocking_page_gaps],
+        "ip_intel_gaps": [dataclasses.asdict(g) for g in result.ip_intel_gaps],
         "warnings": [dataclasses.asdict(w) for w in result.warnings],
     }
 
@@ -184,13 +225,20 @@ async def translate_conversion(request: Request, conversion_id: str):
     """Translate the parsed ASM policy using submitted decisions."""
     session = _get_session(request, conversion_id)
     body = await request.json()
-    namespace = body.get("namespace", "default")
     name_override = body.get("name")
+
+    # Accept per-object namespaces or a single namespace for all
+    namespaces = body.get("namespaces", body.get("namespace", "default"))
 
     if session.asm_policy is None:
         raise HTTPException(status_code=400, detail="No policy parsed yet")
 
-    result = translate(session.asm_policy, session.decisions, namespace, name_override)
+    policy = session.asm_policy
+    overrides = body.get("overrides")
+    if overrides:
+        policy = _apply_overrides(policy, overrides)
+
+    result = translate(policy, session.decisions, namespaces, name_override)
     session.translation = result
     session.status = "translated"
 

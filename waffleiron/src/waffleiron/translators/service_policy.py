@@ -9,6 +9,7 @@ from __future__ import annotations
 import ipaddress
 
 from waffleiron.model import AsmPolicy
+from waffleiron.translators.mappings import ASM_IP_INTEL_TO_XC
 from waffleiron.translators.utils import sanitize_xc_name
 
 # ---------------------------------------------------------------------------
@@ -248,13 +249,16 @@ class ServicePolicyTranslator:
 
         # --- 3. IP intelligence / threat category rules ---
         for category in policy.ip_intelligence.categories:
+            xc_category = ASM_IP_INTEL_TO_XC.get(category.name)
+            if xc_category is None:
+                continue
             rule = {
                 "metadata": {"name": _rule_name_for_threat(category.name)},
                 "spec": {
                     "action": "DENY",
                     "any_client": {},
                     "ip_threat_category_list": {
-                        "ip_threat_categories": [category.name],
+                        "ip_threat_categories": [xc_category],
                     },
                     "waf_action": {"none": {}},
                 },
@@ -264,9 +268,9 @@ class ServicePolicyTranslator:
         if not rules:
             return None
 
-        policy_name = sanitize_xc_name(name_override or policy.name) + "-service-policy"
-        # Truncate to 64 chars safely
-        policy_name = policy_name[:64].rstrip("-")
+        suffix = "-svc"
+        base = sanitize_xc_name(name_override or policy.name)[:64 - len(suffix)].rstrip("-")
+        policy_name = base + suffix
 
         return {
             "metadata": {

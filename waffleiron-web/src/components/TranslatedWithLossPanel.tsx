@@ -15,13 +15,13 @@ const LOSS_ITEMS: {
     key: 'session_tracking_enabled',
     label: 'Session Tracking',
     asmDescription: 'Tracks user sessions to detect anomalies like session hijacking and session awareness.',
-    xcAlternative: 'XC has client-side JavaScript challenge and fingerprinting, but these are configured at the load balancer level — not migrated from the ASM policy.',
+    xcAlternative: 'XC has client-side JavaScript challenge and fingerprinting, but these are configured at the load balancer level — not migrated from the AWAF policy.',
   },
   {
     key: 'brute_force_enabled',
     label: 'Brute Force Protection',
     asmDescription: 'Detects login brute-force attacks by tracking failed attempts over a detection window.',
-    xcAlternative: 'XC supports rate limiting at the load balancer and service policy levels, but ASM login-URL-based brute force config cannot be directly mapped.',
+    xcAlternative: 'XC supports rate limiting at the load balancer and service policy levels, but AWAF login-URL-based brute force config cannot be directly mapped.',
   },
 ];
 
@@ -37,7 +37,7 @@ export default function TranslatedWithLossPanel({ untranslatable, warnings }: Tr
         Translated with Loss
       </h2>
       <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        These features exist in your ASM policy and XC has related capabilities, but the specific configuration cannot be automatically migrated. You will need to configure these manually in XC after the conversion.
+        These features exist in your AWAF policy and XC has related capabilities, but the specific configuration cannot be automatically migrated. You will need to configure these manually in XC after the conversion.
       </p>
 
       {activeItems.length > 0 && (
