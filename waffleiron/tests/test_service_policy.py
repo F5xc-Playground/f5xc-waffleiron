@@ -353,7 +353,7 @@ class TestFileTypeDenyRules:
         assert len(ft_rules) == 1
         assert ft_rules[0]["spec"]["action"] == "DENY"
         assert "path" in ft_rules[0]["spec"]
-        assert "exe" in ft_rules[0]["spec"]["path"]["regex"]
+        assert "exe" in ft_rules[0]["spec"]["path"]["regex_values"][0]
 
     def test_allowed_filetype_no_rule(self):
         policy = make_minimal_policy(
@@ -425,7 +425,7 @@ class TestFileTypeDenyRules:
         result = ServicePolicyTranslator.translate(policy, namespace="ns")
         rules = result["spec"]["rule_list"]["rules"]
         ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
-        regex = ft_rules[0]["spec"]["path"]["regex"]
+        regex = ft_rules[0]["spec"]["path"]["regex_values"][0]
         assert regex == r".*\.exe(\?.*)?$"
 
     def test_filetype_special_chars_escaped(self):
@@ -437,7 +437,7 @@ class TestFileTypeDenyRules:
         result = ServicePolicyTranslator.translate(policy, namespace="ns")
         rules = result["spec"]["rule_list"]["rules"]
         ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
-        regex = ft_rules[0]["spec"]["path"]["regex"]
+        regex = ft_rules[0]["spec"]["path"]["regex_values"][0]
         assert r"tar\.gz" in regex
 
 
@@ -482,7 +482,7 @@ class TestMethodDenyRules:
         ]
         assert len(url_method_rules) == 1
         rule = url_method_rules[0]
-        assert rule["spec"]["path"]["prefix"] == "/api/users"
+        assert rule["spec"]["path"]["prefix_values"] == ["/api/users"]
         assert "POST" in rule["spec"]["http_method"]["methods"]
         assert "GET" not in rule["spec"]["http_method"]["methods"]
 

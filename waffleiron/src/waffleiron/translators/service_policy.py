@@ -228,7 +228,7 @@ def _build_filetype_deny_rules(policy: AsmPolicy) -> list[dict]:
                 "spec": {
                     "action": "DENY",
                     "any_client": {},
-                    "path": {"regex": path_regex},
+                    "path": {"regex_values": [path_regex]},
                     "waf_action": {"none": {}},
                 },
             }
@@ -271,6 +271,10 @@ def _build_method_deny_rules(policy: AsmPolicy) -> list[dict]:
     for url in policy.entities.urls:
         if url.method is None:
             continue
+        if url.method == "*":
+            continue
+        if url.name == "*":
+            continue
         url_allowed = {url.method.upper()}
         denied_for_url = (allowed_global or _ALL_METHODS) - url_allowed
         if not denied_for_url:
@@ -283,7 +287,7 @@ def _build_method_deny_rules(policy: AsmPolicy) -> list[dict]:
             "spec": {
                 "action": "DENY",
                 "any_client": {},
-                "path": {"prefix": url.name},
+                "path": {"prefix_values": [url.name]},
                 "http_method": {"methods": sorted(denied_for_url)},
                 "waf_action": {"none": {}},
             },
