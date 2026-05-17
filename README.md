@@ -37,6 +37,8 @@ AWAF Policy Export (XML/JSON)
 - **Partial positive security.** Disallowed file types and HTTP method restrictions translate to service policy DENY rules when enforcement mode is blocking and the relevant violation is not alarm-only. Other positive security (URL value constraints, parameter types, cookies, mandatory headers) has no XC equivalent and appears in the gap report.
 - **Same engine, different model.** The translation is about policy structure, not detection capability.
 
+For a complete feature-by-feature breakdown, see [docs/coverage.md](docs/coverage.md).
+
 ### Analysis & Gap Reporting
 
 Every conversion produces a gap report (Markdown or JSON) covering:
