@@ -70,7 +70,7 @@ Configure the output namespace and policy name, then generate XC objects:
 waffleiron/          # Core Python library (parse, analyze, translate)
 waffleiron-api/      # FastAPI backend
 waffleiron-web/      # React + Vite frontend
-waffleiron-cli/      # CLI interface (planned)
+waffleiron-cli/      # CLI interface (convert, analyze, validate, push)
 ```
 
 ## Development
@@ -83,12 +83,20 @@ make dev
 make test
 ```
 
-## Documentation
+## CLI Usage
 
-| Document | Purpose |
-|----------|---------|
-| [docs/architecture.md](docs/architecture.md) | Tool architecture and processing pipeline |
-| [docs/asm-xml-schema.md](docs/asm-xml-schema.md) | AWAF XML export structure and field reference |
-| [docs/xc-target-objects.md](docs/xc-target-objects.md) | XC API objects and schemas |
-| [docs/field-mapping.md](docs/field-mapping.md) | Field-by-field translation rules |
-| [docs/gaps-and-decisions.md](docs/gaps-and-decisions.md) | What can't translate and user decisions |
+```bash
+# One-shot conversion (all alarm-only items enforced)
+waffleiron convert policy.xml --namespace my-ns --output ./output --alarm-only-signatures=enforce
+
+# Two-step: analyze first, review decisions, then convert
+waffleiron analyze policy.xml --output ./analysis
+# ... edit analysis/decisions.yaml ...
+waffleiron convert policy.xml --namespace my-ns --output ./output --decisions ./analysis/decisions.yaml
+
+# Validate and push
+waffleiron validate ./output
+waffleiron push ./output
+```
+
+See [docs/cli-and-api-workflows.md](docs/cli-and-api-workflows.md) for complete CLI and REST API workflow documentation.

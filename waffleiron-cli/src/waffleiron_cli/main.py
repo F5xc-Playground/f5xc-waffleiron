@@ -240,18 +240,97 @@ def validate(
 # ---------------------------------------------------------------------------
 
 
+def _resolve_push_config(
+    tenant_url: str | None,
+    api_token: str | None,
+    p12_path: Path | None,
+    p12_password: str | None,
+) -> "XCConfig | None":
+    """Build XCConfig from explicit args or fall back to env-var resolution."""
+    from waffleiron.xc_client import XCConfig
+
+    if tenant_url and api_token:
+        return XCConfig(tenant_url=tenant_url, api_token=api_token, auth_method="token")
+    if tenant_url and p12_path:
+        return XCConfig(
+            tenant_url=tenant_url,
+            auth_method="p12",
+            p12_path=str(p12_path),
+            p12_password=p12_password,
+        )
+    return XCConfig.from_env()
+
+
+_PUSH_FILE_MAP: dict[str, str] = {
+    "app_firewall.json": "app_firewalls",
+    "waf_exclusion_policy.json": "waf_exclusion_policys",
+    "service_policy.json": "service_policys",
+}
+
+
 @app.command()
 def push(
     output_dir: Path = typer.Argument(..., help="Directory containing XC JSON output files"),
-    namespace: Optional[str] = typer.Option(None, help="Target namespace"),
+    namespace: Optional[str] = typer.Option(None, help="Override namespace in pushed objects"),
     shared: bool = typer.Option(False, help="Push to shared namespace"),
     tenant_url: Optional[str] = typer.Option(None, envvar="F5XC_TENANT_URL"),
     api_token: Optional[str] = typer.Option(None, envvar="F5XC_API_TOKEN"),
     p12_path: Optional[Path] = typer.Option(None, envvar="F5XC_P12_PATH"),
     p12_password: Optional[str] = typer.Option(None, envvar="F5XC_P12_PASSWORD"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be pushed without pushing"),
 ) -> None:
     """Push XC configuration objects to an F5 XC tenant."""
-    console.print("[yellow]XC push not yet implemented.[/yellow]")
+    if not output_dir.is_dir():
+        console.print(f"[red]Error:[/red] not a directory: {output_dir}")
+        raise typer.Exit(code=1)
+
+    if shared:
+        namespace = "shared"
+
+    xc_config = _resolve_push_config(tenant_url, api_token, p12_path, p12_password)
+    if xc_config is None:
+        console.print("[red]Error:[/red] No XC credentials. Set F5XC_TENANT_URL + F5XC_API_TOKEN or use --tenant-url/--api-token.")
+        raise typer.Exit(code=1)
+
+    from waffleiron.xc_client import XCClient
+
+    client = XCClient(xc_config)
+
+    pushed = 0
+    for filename, resource in _PUSH_FILE_MAP.items():
+        filepath = output_dir / filename
+        if not filepath.exists():
+            continue
+
+        obj = json.loads(filepath.read_text())
+
+        # Namespace override
+        if namespace:
+            obj.setdefault("metadata", {})["namespace"] = namespace
+
+        obj_ns = obj.get("metadata", {}).get("namespace", "default")
+        obj_name = obj.get("metadata", {}).get("name", "unknown")
+
+        if dry_run:
+            console.print(f"  [dim]would push[/dim] {filename} → {obj_ns}/{obj_name}")
+            pushed += 1
+            continue
+
+        try:
+            client.create_object(resource, obj_ns, obj)
+            console.print(f"  [green]✓[/green] {filename} → {obj_ns}/{obj_name}")
+            pushed += 1
+        except Exception as e:
+            console.print(f"  [red]✗[/red] {filename} → {obj_ns}/{obj_name}: {e}")
+
+    if pushed == 0:
+        console.print("[yellow]No pushable JSON files found in the directory.[/yellow]")
+        raise typer.Exit(code=1)
+
+    if dry_run:
+        console.print(f"\n[dim]Dry run complete. {pushed} object(s) would be pushed.[/dim]")
+    else:
+        console.print(f"\n[green]Push complete.[/green] {pushed} object(s) pushed to {xc_config.tenant_url}")
 
 
 # ---------------------------------------------------------------------------
@@ -263,9 +342,32 @@ def push(
 def xc_status(
     tenant_url: Optional[str] = typer.Option(None, envvar="F5XC_TENANT_URL"),
     api_token: Optional[str] = typer.Option(None, envvar="F5XC_API_TOKEN"),
+    p12_path: Optional[Path] = typer.Option(None, envvar="F5XC_P12_PATH"),
+    p12_password: Optional[str] = typer.Option(None, envvar="F5XC_P12_PASSWORD"),
 ) -> None:
     """Check connectivity and status of an F5 XC tenant."""
-    console.print("[yellow]XC status not yet implemented.[/yellow]")
+    xc_config = _resolve_push_config(tenant_url, api_token, p12_path, p12_password)
+    if xc_config is None:
+        console.print("[yellow]No XC credentials configured.[/yellow]")
+        console.print("Set F5XC_TENANT_URL + F5XC_API_TOKEN (env vars or --tenant-url/--api-token).")
+        raise typer.Exit(code=1)
+
+    from waffleiron.xc_client import XCClient
+
+    client = XCClient(xc_config)
+
+    console.print(f"Tenant: {xc_config.tenant_url}")
+    console.print(f"Auth:   {xc_config.auth_method}")
+
+    if client.check_connection():
+        console.print("[green]Status: connected[/green]")
+
+        namespaces = client.list_namespaces()
+        ns_names = [ns["name"] for ns in namespaces[:10]]
+        console.print(f"Namespaces: {', '.join(ns_names)}" + (" ..." if len(namespaces) > 10 else ""))
+    else:
+        console.print("[red]Status: connection failed[/red]")
+        raise typer.Exit(code=1)
 
 
 # ---------------------------------------------------------------------------

@@ -70,19 +70,41 @@ class TestValidate:
 
 
 class TestPush:
-    def test_push_stub(self, tmp_path):
+    def test_push_no_creds(self, tmp_path):
+        result = runner.invoke(app, ["push", str(tmp_path)])
+        assert result.exit_code == 1
+        assert "No XC credentials" in result.output
+
+    def test_push_no_files(self, tmp_path):
         result = runner.invoke(app, [
             "push", str(tmp_path),
+            "--tenant-url", "https://example.console.ves.volterra.io",
+            "--api-token", "fake",
+        ])
+        assert result.exit_code == 1
+        assert "No pushable JSON" in result.output
+
+    def test_push_dry_run(self, fixtures_path, tmp_path):
+        runner.invoke(app, [
+            "convert", str(fixtures_path / "minimal_blocking.xml"),
+            "--namespace", "test-ns", "--output", str(tmp_path / "output"),
+        ])
+        result = runner.invoke(app, [
+            "push", str(tmp_path / "output"),
+            "--tenant-url", "https://example.console.ves.volterra.io",
+            "--api-token", "fake",
+            "--dry-run",
         ])
         assert result.exit_code == 0, result.output
-        assert "not yet implemented" in result.output.lower()
+        assert "would push" in result.output
+        assert "app_firewall.json" in result.output
 
 
 class TestXcStatus:
-    def test_xc_status_stub(self):
+    def test_xc_status_no_creds(self):
         result = runner.invoke(app, ["xc-status"])
-        assert result.exit_code == 0, result.output
-        assert "not yet implemented" in result.output.lower()
+        assert result.exit_code == 1
+        assert "No XC credentials" in result.output
 
 
 class TestMissingFile:
