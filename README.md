@@ -28,13 +28,13 @@ AWAF Policy Export (XML/JSON)
 |--------|-----------------|
 | **App Firewall** | Enforcement mode, signature sets, violation settings, bot protection, blocking page, data anonymization |
 | **WAF Exclusion Policy** | Per-signature and per-path exclusion rules derived from AWAF tuning and alarm-only decisions |
-| **Service Policy** | IP allow/deny lists, geolocation restrictions, IP intelligence threat categories |
+| **Service Policy** | IP allow/deny lists, geolocation restrictions, IP intelligence threat categories, file type deny rules, HTTP method restrictions |
 | **HTTP LB Patch** | CSRF and Data Guard settings (reference snippet — applied at the HTTP Load Balancer level, not pushed as a standalone object) |
 
 ### Key Translation Constraints
 
 - **No alarm-only in XC.** AWAF supports per-signature "detect and log without blocking." XC is binary — enforce or exclude. WaffleIron flags these for user decision.
-- **No positive security model.** AWAF URL/parameter/file-type entities with value constraints have no XC equivalent. These appear in the gap report.
+- **Partial positive security.** Disallowed file types and HTTP method restrictions translate to service policy DENY rules when enforcement mode is blocking and the relevant violation is not alarm-only. Other positive security (URL value constraints, parameter types, cookies, mandatory headers) has no XC equivalent and appears in the gap report.
 - **Same engine, different model.** The translation is about policy structure, not detection capability.
 
 ### Analysis & Gap Reporting
@@ -42,7 +42,7 @@ AWAF Policy Export (XML/JSON)
 Every conversion produces a gap report (Markdown or JSON) covering:
 
 - Alarm-only signatures and violations requiring decisions
-- Positive security entities that can't translate
+- Positive security entities — what translated and what can't
 - Custom signatures without XC equivalents
 - Bot defense actions not supported in XC (challenge, CAPTCHA, rate-limiting)
 - Blocking page template variables without XC equivalents
