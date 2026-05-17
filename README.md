@@ -74,9 +74,10 @@ waffleiron convert policy.xml \
   --output ./output \
   --alarm-only-signatures=enforce
 
-# Two-step: analyze, review decisions, then convert
+# Two-step: analyze first, then convert with reviewed decisions
 waffleiron analyze policy.xml --output ./analysis
-# ... edit analysis/decisions.yaml ...
+# Creates: analysis/gap_report.md, analysis/gap_report.json, analysis/decisions.yaml
+# Review the gap report, then edit decisions.yaml to set actions per signature/violation
 waffleiron convert policy.xml \
   --namespace my-ns \
   --output ./output \
