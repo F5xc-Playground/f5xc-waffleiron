@@ -131,6 +131,8 @@ class AnalysisResult:
     ip_intel_gaps: list[IpIntelGap] = field(default_factory=list)
     warnings: list[LimitWarning] = field(default_factory=list)
     summary: ConversionSummary = field(default_factory=ConversionSummary)
+    csrf_enabled: bool = False
+    data_guard_enabled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -428,4 +430,6 @@ def analyze(policy: AsmPolicy) -> AnalysisResult:
         ip_intel_gaps=ip_intel_gaps,
         warnings=warnings,
         summary=summary,
+        csrf_enabled=policy.csrf.enabled,
+        data_guard_enabled=policy.data_guard.enabled,
     )

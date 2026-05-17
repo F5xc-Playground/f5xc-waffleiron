@@ -412,6 +412,14 @@ export default function ReviewView() {
                   ))}
                 </div>
 
+                {activeTab === 'http_lb_patch' && (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+                    <p className="text-sm text-amber-800 dark:text-amber-300">
+                      <span className="font-semibold">Not pushed to XC.</span> CSRF and Data Guard are configured at the HTTP Load Balancer level in XC, not on the WAF policy. Apply these settings manually to your HTTP LB after deployment. This snippet is included in the JSON download for reference.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-3">
                   {activeData && activeTab && (
                     <JsonViewer
