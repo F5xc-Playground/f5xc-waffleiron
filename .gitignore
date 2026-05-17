@@ -8,5 +8,5 @@ build/
 venv/
 .DS_Store
 output/
-docs/
+docs/superpowers/
 sample-policies/

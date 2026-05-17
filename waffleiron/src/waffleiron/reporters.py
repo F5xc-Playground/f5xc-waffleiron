@@ -133,6 +133,7 @@ def _render_json(
             }
             for w in analysis.warnings
         ],
+        "manual_steps": _build_manual_steps(analysis),
         "xc_recommendations": _build_recommendations(analysis),
     }
     return json.dumps(data, indent=2)
@@ -264,6 +265,21 @@ def _render_markdown(
         lines.append("_None_")
     lines.append("")
 
+    # --- Manual Steps Required ----------------------------------------
+    manual_steps = _build_manual_steps(analysis)
+    lines.append("## Manual Steps Required")
+    lines.append("")
+    if manual_steps:
+        lines.append("These settings are included in the `http_lb_patch` output but must be applied manually to your XC HTTP Load Balancer — they cannot be pushed via the API as standalone objects.")
+        lines.append("")
+        lines.append("| Feature | Details |")
+        lines.append("|---------|---------|")
+        for step in manual_steps:
+            lines.append(f"| {step['feature']} | {step['details']} |")
+    else:
+        lines.append("_None_")
+    lines.append("")
+
     # --- XC Feature Recommendations -----------------------------------
     lines.append("## XC Feature Recommendations")
     lines.append("")
@@ -283,6 +299,25 @@ def _render_markdown(
 # ---------------------------------------------------------------------------
 # Shared recommendation builder
 # ---------------------------------------------------------------------------
+
+
+def _build_manual_steps(analysis: AnalysisResult) -> list[dict]:
+    """Return manual steps for features that require HTTP LB configuration."""
+    steps: list[dict] = []
+
+    if analysis.csrf_enabled:
+        steps.append({
+            "feature": "CSRF Protection",
+            "details": "Enable CSRF protection on your HTTP Load Balancer. See http_lb_patch output for URL configuration.",
+        })
+
+    if analysis.data_guard_enabled:
+        steps.append({
+            "feature": "Data Guard",
+            "details": "Enable Data Guard (response data masking) on your HTTP Load Balancer. See http_lb_patch output for masking settings.",
+        })
+
+    return steps
 
 
 def _build_recommendations(analysis: AnalysisResult) -> list[dict]:

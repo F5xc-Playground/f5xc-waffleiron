@@ -3,16 +3,15 @@ import { useConversion } from '../context/ConversionContext';
 import { getXCStatus, pushToXC } from '../api';
 import type { TranslationOutputs, PushResult, XCStatus } from '../types';
 
-const OBJECT_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
+const PUSHABLE_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
   { key: 'app_firewall', label: 'App Firewall' },
   { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
   { key: 'service_policy', label: 'Service Policy' },
-  { key: 'http_lb_patch', label: 'HTTP LB Patch' },
 ];
 
 function getAvailableObjects(outputs: TranslationOutputs | null) {
   if (!outputs) return [];
-  return OBJECT_TYPES.filter((t) => outputs[t.key] !== undefined);
+  return PUSHABLE_TYPES.filter((t) => outputs[t.key] !== undefined);
 }
 
 function getObjectNamespace(outputs: TranslationOutputs, key: string): string {
@@ -270,6 +269,15 @@ export default function PushModal({ onClose }: PushModalProps) {
             )}
           </div>
 
+          {/* HTTP LB Patch note */}
+          {state.outputs?.http_lb_patch && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-900/20">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                <span className="font-medium">HTTP LB Patch</span> — This policy includes CSRF and/or Data Guard settings that must be applied manually to your HTTP Load Balancer. These are included in the JSON download but cannot be pushed as standalone objects. See the gap report for details.
+              </p>
+            </div>
+          )}
+
           {/* Push Error */}
           {pushError && (
             <div className="rounded-md bg-red-50 px-4 py-3 dark:bg-red-900/20">
@@ -286,7 +294,7 @@ export default function PushModal({ onClose }: PushModalProps) {
               <div className="space-y-2">
                 {results.map((r) => {
                   const label =
-                    OBJECT_TYPES.find((t) => t.key === r.object_type)?.label ??
+                    PUSHABLE_TYPES.find((t) => t.key === r.object_type)?.label ??
                     r.object_type;
 
                   return (
