@@ -1,0 +1,237 @@
+# WaffleIron
+
+> Convert BIG-IP AWAF WAF policies to F5 Distributed Cloud (XC) WAF configurations.
+
+WaffleIron ingests AWAF XML or JSON policy exports and produces XC API-ready JSON objects. It handles signature mapping, alarm-only decision resolution, exclusion rule generation, and gap reporting. Available as a CLI, REST API, and web UI — all backed by the same Python library.
+
+## Core Concepts
+
+AWAF and XC share ~8,000 attack signatures but use different policy models. Key translation constraints:
+
+- AWAF supports per-signature alarm-only mode (detect without blocking). XC does not — signatures either enforce (block) or must be excluded. Every alarm-only signature requires a decision: enforce, exclude, or defer.
+- AWAF positive security entities (URL/parameter/file-type with value constraints) have no XC equivalent. These are reported but cannot be translated.
+- CSRF and Data Guard settings live on the XC HTTP Load Balancer, not the WAF policy. These are output as a reference snippet (`http_lb_patch`) but cannot be pushed as standalone objects.
+
+## Generated XC Objects
+
+Each conversion can produce up to four objects:
+
+- `app_firewall` — always generated. Enforcement mode, signature sets, violations, bot protection, blocking page, data anonymization.
+- `waf_exclusion_policy` — generated when the policy has tuning overrides or alarm-only exclusion decisions. Per-signature and per-path exclusion rules. Omitted (None) when no exclusion rules exist.
+- `service_policy` — generated when the policy has IP allow/deny lists, geolocation blocks, or IP intelligence categories. Omitted when none exist.
+- `http_lb_patch` — generated when CSRF or Data Guard is enabled. Reference snippet only — must be applied manually to an XC HTTP Load Balancer. Not pushable via API.
+
+## CLI Usage
+
+The CLI is stateless. Each command runs independently.
+
+### Commands
+
+```
+waffleiron analyze <policy-file> --output <dir>
+waffleiron convert <policy-file> --namespace <ns> --output <dir> [--decisions <yaml>] [--alarm-only-signatures enforce|exclude|defer] [--alarm-only-violations enforce|disable|defer]
+waffleiron validate <output-dir>
+waffleiron push <output-dir> [--namespace <ns>] [--dry-run] [--tenant-url <url>] [--api-token <token>]
+waffleiron xc-status [--tenant-url <url>] [--api-token <token>]
+```
+
+### Recommended Workflow
+
+Step 1 — Analyze the policy:
+
+```
+waffleiron analyze policy.xml --output ./analysis
+```
+
+Produces three files in `./analysis/`:
+- `gap_report.md` — human-readable gap and coverage report
+- `gap_report.json` — machine-readable analysis data
+- `decisions.yaml` — template with all alarm-only items set to "defer"
+
+Step 2 — Edit `decisions.yaml` to set actions:
+
+```yaml
+alarm_only_signatures:
+  - sig_id: 200003505
+    description: "SQL Injection (parameterized)"
+    scope: global
+    decision: enforce    # enforce | exclude | defer
+
+alarm_only_violations:
+  - violation: VIOL_EVASION
+    decision: enforce    # enforce | disable | defer
+
+bot_protection:
+  - category: search_engine
+    asm_action: alarm
+    decision: report     # block | report | ignore
+```
+
+Decision meanings for signatures:
+- `enforce` — block in XC (stricter than AWAF alarm-only)
+- `exclude` — add to WAF exclusion policy (preserves AWAF detect-only behavior)
+- `defer` — no rule created, rely on XC defaults
+
+Decision meanings for violations:
+- `enforce` — block in XC
+- `disable` — remove the violation check entirely
+- `defer` — no rule created, rely on XC defaults
+
+Step 3 — Convert with decisions:
+
+```
+waffleiron convert policy.xml --namespace my-ns --output ./output --decisions ./analysis/decisions.yaml
+```
+
+Produces XC JSON files in `./output/`: `app_firewall.json`, optionally `waf_exclusion_policy.json`, `service_policy.json`, `http_lb_patch.json`, plus `gap_report.md` and `decisions.yaml`.
+
+Step 4 — Validate and push:
+
+```
+waffleiron validate ./output
+waffleiron push ./output --dry-run
+waffleiron push ./output
+```
+
+For bulk automation without individual decisions, use `--alarm-only-signatures=enforce` to apply the same action to all alarm-only items:
+
+```
+waffleiron convert policy.xml --namespace my-ns --output ./output --alarm-only-signatures=enforce --alarm-only-violations=enforce
+```
+
+## REST API Usage
+
+The API is session-based. Base URL: `http://localhost:8080/api/v1`. Sessions expire after 1 hour.
+
+### Endpoints
+
+```
+POST   /conversions                              Upload policy file (multipart form, field: "file")
+GET    /conversions/{id}                          Get session status
+GET    /conversions/{id}/analysis                 Get analysis (computed lazily on first access)
+PUT    /conversions/{id}/decisions                Submit decisions JSON
+POST   /conversions/{id}/translate                Translate to XC objects
+GET    /conversions/{id}/outputs                  List available output types
+GET    /conversions/{id}/outputs/{object_type}    Download specific XC object JSON
+GET    /conversions/{id}/report                   Get gap report (set Accept: text/markdown or application/json)
+POST   /conversions/{id}/push                     Push objects to XC tenant
+POST   /conversions/{id}/push/delete              Delete pushed objects from XC tenant
+DELETE /conversions/{id}                          Delete session
+
+GET    /xc/status                                 Check if XC credentials are configured
+POST   /xc/connect                                Test XC connectivity
+GET    /xc/namespaces                             List XC namespaces
+
+GET    /healthz                                   Health check
+```
+
+### End-to-End API Workflow
+
+```bash
+# 1. Upload
+SESSION=$(curl -s -X POST http://localhost:8080/api/v1/conversions -F "file=@policy.xml" | jq -r '.id')
+
+# 2. Get analysis
+curl -s http://localhost:8080/api/v1/conversions/$SESSION/analysis | jq .
+
+# 3. Submit decisions
+curl -s -X PUT http://localhost:8080/api/v1/conversions/$SESSION/decisions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alarm_only_signatures": [
+      {"sig_id": 200003505, "action": "enforce", "description": "SQL Injection", "scope": "global"}
+    ],
+    "alarm_only_violations": [
+      {"violation": "VIOL_EVASION", "action": "enforce"}
+    ]
+  }'
+
+# 4. Translate
+curl -s -X POST http://localhost:8080/api/v1/conversions/$SESSION/translate \
+  -H "Content-Type: application/json" \
+  -d '{"namespace": "my-namespace", "name": "my-policy"}'
+
+# 5. Download outputs
+curl -s http://localhost:8080/api/v1/conversions/$SESSION/outputs/app_firewall > app_firewall.json
+
+# 6. Get gap report
+curl -s http://localhost:8080/api/v1/conversions/$SESSION/report -H "Accept: text/markdown" > gap_report.md
+
+# 7. Push to XC (optional — provide credentials if not configured on server)
+curl -s -X POST http://localhost:8080/api/v1/conversions/$SESSION/push \
+  -H "Content-Type: application/json" \
+  -d '{
+    "objects": ["app_firewall", "waf_exclusion_policy", "service_policy"],
+    "tenant_url": "https://tenant.console.ves.volterra.io",
+    "api_token": "your-token"
+  }'
+
+# 8. Clean up
+curl -s -X DELETE http://localhost:8080/api/v1/conversions/$SESSION
+```
+
+### Key API Response Shapes
+
+Analysis response (GET /conversions/{id}/analysis):
+```json
+{
+  "policy_info": {
+    "name": "string",
+    "enforcement_mode": "blocking|transparent",
+    "features": {"csrf": false, "data_guard": true, "bot_defense": true, ...},
+    "entity_counts": {"urls": 12, "parameters": 5, ...}
+  },
+  "summary": {
+    "total": 145,
+    "directly_translated": 120,
+    "translated_with_loss": 5,
+    "decisions_required": 12,
+    "cannot_translate": 8
+  },
+  "alarm_only_signatures": [{"sig_id": 200003505, "description": "...", "scope": "global"}],
+  "alarm_only_violations": [{"violation_name": "VIOL_EVASION", "alarm": true, "block": false}],
+  "bot_gaps": [{"category": "...", "asm_action": "challenge", "reason": "..."}],
+  "warnings": [{"resource": "exclusion_rules", "count": 300, "limit": 256, "message": "..."}]
+}
+```
+
+Push response (POST /conversions/{id}/push):
+```json
+{
+  "results": [
+    {"object_type": "app_firewall", "success": true, "namespace": "my-ns"},
+    {"object_type": "waf_exclusion_policy", "success": true, "namespace": "my-ns"},
+    {"object_type": "service_policy", "success": false, "error": "not available"}
+  ]
+}
+```
+
+## XC Authentication
+
+Set via environment variables (used by CLI and API server):
+
+```
+F5XC_TENANT_URL=https://tenant.console.ves.volterra.io
+F5XC_API_TOKEN=your-api-token
+```
+
+CLI also accepts `--tenant-url` and `--api-token` flags. API push/connect endpoints accept `tenant_url` and `api_token` in the request body, falling back to server-configured credentials.
+
+## Running
+
+Docker (includes web UI, API, and CLI):
+
+```
+docker compose up -d --build
+# Web UI: http://localhost:8080
+# API: http://localhost:8080/api/v1/
+# CLI: docker compose run --rm waffleiron waffleiron <command>
+```
+
+## Important Constraints
+
+- `http_lb_patch` is NOT a pushable XC object. It is a reference snippet for CSRF/Data Guard settings that must be applied manually to an HTTP Load Balancer in XC.
+- XC rejects WAF exclusion policies with empty rules arrays. WaffleIron returns None (CLI skips the file, API returns null) when no exclusion rules exist.
+- XC has a 256 exclusion rule limit per policy and a 64 anonymization rule limit. The gap report warns when these are exceeded.
+- Object names must conform to DNS-1035 labels (lowercase alphanumeric + hyphens, max 64 chars). The tool auto-sanitizes policy names.
+- Push uses POST (create). If an object already exists in the namespace, the push will fail with a 409 conflict. Use the push/delete endpoint or XC console to remove existing objects first.
