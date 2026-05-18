@@ -1,10 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
+import { Loader2, Download, Check, Cloud, CheckCircle } from 'lucide-react';
 import { useConversion } from '../context/ConversionContext';
 import { getReport, getXCStatus, listNamespaces, runTranslation } from '../api';
 import JsonViewer from '../components/JsonViewer';
 import GapReport from '../components/GapReport';
 import PushModal from '../components/PushModal';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { TranslationOutputs } from '../types';
 
 const OBJECT_TYPES = [
@@ -89,10 +98,6 @@ export default function ReviewView() {
     }
   }, [tabs]);
 
-  const activeData = activeTab && outputs
-    ? outputs[activeTab as keyof TranslationOutputs]
-    : undefined;
-
   const handleObjectSave = useCallback((objectType: string, updated: object) => {
     if (!outputs) return;
     const newOutputs = { ...outputs, [objectType]: updated };
@@ -156,8 +161,8 @@ export default function ReviewView() {
   if (!sessionId) {
     return (
       <div className="flex-1 px-6 py-4">
-        <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
-          <p className="text-gray-500 dark:text-gray-400">
+        <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-border p-12 text-center">
+          <p className="text-muted-foreground">
             No conversion session available.
           </p>
         </div>
@@ -172,172 +177,144 @@ export default function ReviewView() {
     <div className="flex-1 px-6 py-4">
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Output Configuration */}
-        <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            Output Configuration
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="policyName"
-                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Base Name
-              </label>
-              <input
-                id="policyName"
-                type="text"
-                value={policyName}
-                onChange={(e) => setPolicyName(e.target.value)}
-                placeholder="e.g. my-policy"
-                className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
-              />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                Base for XC object names (auto-sanitized)
-              </p>
-            </div>
-            {!advancedNs && (
-              <div>
-                <label
-                  htmlFor="namespace"
-                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Namespace
-                </label>
-                {nsLoading ? (
-                  <div className="flex h-[38px] items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-400 dark:border-gray-600 dark:bg-gray-900">
-                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Loading namespaces...
-                  </div>
-                ) : xcNamespaces ? (
-                  <select
-                    id="namespace"
-                    value={namespace}
-                    onChange={(e) => setNamespace(e.target.value)}
-                    className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                  >
-                    {xcNamespaces.map((ns) => (
-                      <option key={ns} value={ns}>{ns}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    id="namespace"
-                    type="text"
-                    value={namespace}
-                    onChange={(e) => setNamespace(e.target.value)}
-                    placeholder="e.g. my-namespace"
-                    className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
-                  />
-                )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Output Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="policyName">Base Name</Label>
+                <Input
+                  id="policyName"
+                  value={policyName}
+                  onChange={(e) => setPolicyName(e.target.value)}
+                  placeholder="e.g. my-policy"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Base for XC object names (auto-sanitized)
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Per-object namespace toggle */}
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={advancedNs}
-              onClick={() => {
-                setAdvancedNs(!advancedNs);
-                if (!advancedNs) {
-                  setPerObjectNs({
-                    app_firewall: namespace,
-                    exclusion_policy: namespace,
-                    service_policy: namespace,
-                  });
-                }
-              }}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${advancedNs ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform ${advancedNs ? 'translate-x-4' : 'translate-x-0'}`}
-              />
-            </button>
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Per-object namespaces
-            </span>
-          </div>
-
-          {advancedNs && (
-            <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
-              <div className="space-y-2">
-                {NAMESPACE_OBJECTS.map((obj) => (
-                  <div key={obj.key} className="flex items-center gap-3">
-                    <span className="w-40 shrink-0 text-sm text-gray-700 dark:text-gray-300">
-                      {obj.label}
-                    </span>
-                    {xcNamespaces ? (
-                      <select
-                        value={perObjectNs[obj.key] ?? namespace}
-                        onChange={(e) =>
-                          setPerObjectNs((prev) => ({ ...prev, [obj.key]: e.target.value }))
-                        }
-                        className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
-                      >
+              {!advancedNs && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="namespace">Namespace</Label>
+                  {nsLoading ? (
+                    <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading namespaces...
+                    </div>
+                  ) : xcNamespaces ? (
+                    <Select value={namespace} onValueChange={setNamespace}>
+                      <SelectTrigger id="namespace" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
                         {xcNamespaces.map((ns) => (
-                          <option key={ns} value={ns}>{ns}</option>
+                          <SelectItem key={ns} value={ns}>{ns}</SelectItem>
                         ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={perObjectNs[obj.key] ?? namespace}
-                        onChange={(e) =>
-                          setPerObjectNs((prev) => ({ ...prev, [obj.key]: e.target.value }))
-                        }
-                        placeholder="namespace"
-                        className="block h-[38px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {translateError && (
-            <div className="mt-4 rounded-md bg-red-50 px-4 py-3 dark:bg-red-900/20">
-              <p className="text-sm text-red-700 dark:text-red-400">{translateError}</p>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleTranslate}
-              disabled={translating || !policyName.trim() || (!advancedNs && !namespace.trim())}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {translating ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Generating...
-                </>
-              ) : outputs ? (
-                'Regenerate Output'
-              ) : (
-                'Generate Output'
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="namespace"
+                      value={namespace}
+                      onChange={(e) => setNamespace(e.target.value)}
+                      placeholder="e.g. my-namespace"
+                    />
+                  )}
+                </div>
               )}
-            </button>
-            {outputs && !translating && (
-              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Output ready
-              </span>
+            </div>
+
+            {/* Per-object namespace toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="advancedNs"
+                checked={advancedNs}
+                onCheckedChange={(checked) => {
+                  setAdvancedNs(checked);
+                  if (checked) {
+                    setPerObjectNs({
+                      app_firewall: namespace,
+                      exclusion_policy: namespace,
+                      service_policy: namespace,
+                    });
+                  }
+                }}
+              />
+              <Label htmlFor="advancedNs">Per-object namespaces</Label>
+            </div>
+
+            {advancedNs && (
+              <div className="rounded-md border border-border bg-muted/50 p-3">
+                <div className="space-y-2">
+                  {NAMESPACE_OBJECTS.map((obj) => (
+                    <div key={obj.key} className="flex items-center gap-3">
+                      <span className="w-40 shrink-0 text-sm text-muted-foreground">
+                        {obj.label}
+                      </span>
+                      {xcNamespaces ? (
+                        <Select
+                          value={perObjectNs[obj.key] ?? namespace}
+                          onValueChange={(value) =>
+                            setPerObjectNs((prev) => ({ ...prev, [obj.key]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {xcNamespaces.map((ns) => (
+                              <SelectItem key={ns} value={ns}>{ns}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={perObjectNs[obj.key] ?? namespace}
+                          onChange={(e) =>
+                            setPerObjectNs((prev) => ({ ...prev, [obj.key]: e.target.value }))
+                          }
+                          placeholder="namespace"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
-        </div>
+
+            {translateError && (
+              <Alert variant="destructive">
+                <AlertDescription>{translateError}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleTranslate}
+                disabled={translating || !policyName.trim() || (!advancedNs && !namespace.trim())}
+              >
+                {translating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : outputs ? (
+                  'Regenerate Output'
+                ) : (
+                  'Generate Output'
+                )}
+              </Button>
+              {outputs && !translating && (
+                <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                  <Check className="h-4 w-4" />
+                  Output ready
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Export Actions — only show when outputs exist */}
         {outputs && (
@@ -347,22 +324,17 @@ export default function ReviewView() {
                 type="button"
                 onClick={handleDownloadZip}
                 disabled={zipping}
-                className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-5 text-center shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-500 dark:hover:bg-gray-700"
+                className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-5 py-5 text-center shadow-sm transition-colors hover:border-border/80 hover:bg-accent"
               >
                 {zipping ? (
-                  <svg className="h-8 w-8 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 ) : (
-                  <svg className="h-8 w-8 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
+                  <Download className="h-8 w-8 text-muted-foreground" />
                 )}
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                <span className="text-sm font-semibold text-card-foreground">
                   {zipping ? 'Creating ZIP...' : 'Download JSON'}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-muted-foreground">
                   Export all objects as a ZIP archive
                 </span>
               </button>
@@ -370,21 +342,17 @@ export default function ReviewView() {
               <button
                 type="button"
                 onClick={() => setShowPushModal(true)}
-                className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-5 text-center shadow-sm transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/20"
+                className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-5 py-5 text-center shadow-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
               >
                 {hasPushResults && allPushSucceeded ? (
-                  <svg className="h-8 w-8 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <CheckCircle className="h-8 w-8 text-green-500 dark:text-green-400" />
                 ) : (
-                  <svg className="h-8 w-8 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
+                  <Cloud className="h-8 w-8 text-primary" />
                 )}
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                <span className="text-sm font-semibold text-card-foreground">
                   {hasPushResults && allPushSucceeded ? 'Pushed to XC' : 'Push to XC Tenant'}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-muted-foreground">
                   {hasPushResults && allPushSucceeded
                     ? 'Objects deployed — click to push again'
                     : 'Deploy objects directly to your tenant'}
@@ -393,44 +361,36 @@ export default function ReviewView() {
             </div>
 
             {/* Tabbed JSON Panels */}
-            {tabs.length > 0 && (
-              <div>
-                <div className="flex border-b border-gray-200 dark:border-gray-700">
+            {tabs.length > 0 && activeTab && (
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OutputKey)}>
+                <TabsList>
                   {tabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                        activeTab === tab.key
-                          ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300'
-                      }`}
-                    >
+                    <TabsTrigger key={tab.key} value={tab.key}>
                       {tab.label}
-                    </button>
+                    </TabsTrigger>
                   ))}
-                </div>
+                </TabsList>
 
-                {activeTab === 'http_lb_patch' && (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
-                    <p className="text-sm text-amber-800 dark:text-amber-300">
-                      <span className="font-semibold">Not pushed to XC.</span> CSRF and Data Guard are configured at the HTTP Load Balancer level in XC, not on the WAF policy. Apply these settings manually to your HTTP LB after deployment. This snippet is included in the JSON download for reference.
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-3">
-                  {activeData && activeTab && (
-                    <JsonViewer
-                      data={activeData}
-                      title={tabs.find((t) => t.key === activeTab)?.label}
-                      objectType={activeTab}
-                      onSave={(updated) => handleObjectSave(activeTab, updated)}
-                    />
-                  )}
-                </div>
-              </div>
+                {tabs.map((tab) => (
+                  <TabsContent key={tab.key} value={tab.key}>
+                    {tab.key === 'http_lb_patch' && (
+                      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+                        <p className="text-sm text-amber-800 dark:text-amber-300">
+                          <span className="font-semibold">Not pushed to XC.</span> CSRF and Data Guard are configured at the HTTP Load Balancer level in XC, not on the WAF policy. Apply these settings manually to your HTTP LB after deployment. This snippet is included in the JSON download for reference.
+                        </p>
+                      </div>
+                    )}
+                    {outputs[tab.key as keyof TranslationOutputs] && (
+                      <JsonViewer
+                        data={outputs[tab.key as keyof TranslationOutputs]!}
+                        title={tab.label}
+                        objectType={tab.key}
+                        onSave={(updated) => handleObjectSave(tab.key, updated)}
+                      />
+                    )}
+                  </TabsContent>
+                ))}
+              </Tabs>
             )}
 
             {/* Gap Report */}
