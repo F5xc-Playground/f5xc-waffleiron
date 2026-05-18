@@ -3,6 +3,29 @@ import { useConversion } from '../context/ConversionContext';
 import { getXCStatus, pushToXC } from '../api';
 import type { TranslationOutputs, PushResult, XCStatus } from '../types';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Check,
+  CheckCircle,
+  X,
+  AlertCircle,
+  Loader2,
+  Upload,
+  AlertTriangle,
+} from 'lucide-react';
+
 const PUSHABLE_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
   { key: 'app_firewall', label: 'App Firewall' },
   { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
@@ -131,101 +154,89 @@ export default function PushModal({ onClose }: PushModalProps) {
   }, [state.sessionId, tenantUrl, apiToken, selectedObjects, isContainerConfigured, dispatch]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Push to XC Tenant
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Push to XC Tenant</DialogTitle>
+          <DialogDescription className="sr-only">
+            Push converted policy objects to your F5 XC tenant.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Body */}
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5">
           {/* Auth Section */}
           {loadingStatus ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
               Checking XC connection...
             </div>
           ) : isContainerConfigured ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 dark:border-green-800 dark:bg-green-900/20">
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                  XC Connected
-                </span>
-                {xcStatus?.tenant_url && (
-                  <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                    ({xcStatus.tenant_url})
-                  </span>
-                )}
-              </div>
-            </div>
+            <Alert>
+              <CheckCircle className="size-4 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-green-800 dark:text-green-300">
+                XC Connected
+              </AlertTitle>
+              {xcStatus?.tenant_url && (
+                <AlertDescription className="text-green-600 dark:text-green-400">
+                  {xcStatus.tenant_url}
+                </AlertDescription>
+              )}
+            </Alert>
           ) : (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-foreground">
                 XC Connection
               </h3>
-              <div>
-                <label htmlFor="modal-tenant-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="space-y-1.5">
+                <Label htmlFor="modal-tenant-url">
                   Tenant URL
-                </label>
-                <input
+                </Label>
+                <Input
                   id="modal-tenant-url"
                   type="text"
                   value={tenantUrl}
                   onChange={(e) => setTenantUrl(e.target.value)}
                   placeholder="https://your-tenant.console.ves.volterra.io"
-                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
                 />
               </div>
-              <div>
-                <label htmlFor="modal-api-token" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="space-y-1.5">
+                <Label htmlFor="modal-api-token">
                   API Token
-                </label>
-                <input
+                </Label>
+                <Input
                   id="modal-api-token"
                   type="password"
                   value={apiToken}
                   onChange={(e) => setApiToken(e.target.value)}
                   placeholder="Your XC API token"
-                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
                 />
               </div>
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={handleTestConnection}
                   disabled={testing || (!tenantUrl && !apiToken)}
-                  className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
-                  {testing ? 'Testing...' : 'Test Connection'}
-                </button>
+                  {testing ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    'Test Connection'
+                  )}
+                </Button>
                 {testResult === 'success' && (
                   <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <Check className="size-4" />
                     Connected
                   </span>
                 )}
                 {testResult === 'error' && (
-                  <span className="text-sm text-red-600 dark:text-red-400">
+                  <span className="flex items-center gap-1 text-sm text-destructive">
+                    <AlertCircle className="size-4" />
                     {testError}
                   </span>
                 )}
@@ -235,11 +246,11 @@ export default function PushModal({ onClose }: PushModalProps) {
 
           {/* Object Checklist with Namespaces */}
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">
               Objects to Push
             </h3>
             {availableObjects.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 No objects available.
               </p>
             ) : (
@@ -254,14 +265,14 @@ export default function PushModal({ onClose }: PushModalProps) {
                         type="checkbox"
                         checked={selectedObjects.has(obj.key)}
                         onChange={() => toggleObject(obj.key)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                        className="size-4 rounded border-input text-primary focus:ring-ring"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="text-sm text-foreground">
                         {obj.label}
                       </span>
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                      <Badge variant="secondary">
                         {ns}
-                      </span>
+                      </Badge>
                     </label>
                   );
                 })}
@@ -271,24 +282,29 @@ export default function PushModal({ onClose }: PushModalProps) {
 
           {/* HTTP LB Patch note */}
           {state.outputs?.http_lb_patch && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-900/20">
-              <p className="text-sm text-amber-800 dark:text-amber-300">
-                <span className="font-medium">HTTP LB Patch</span> — This policy includes CSRF and/or Data Guard settings that must be applied manually to your HTTP Load Balancer. These are included in the JSON download but cannot be pushed as standalone objects. See the gap report for details.
-              </p>
-            </div>
+            <Alert>
+              <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400" />
+              <AlertTitle className="text-yellow-800 dark:text-yellow-300">
+                HTTP LB Patch
+              </AlertTitle>
+              <AlertDescription className="text-foreground">
+                This policy includes CSRF and/or Data Guard settings that must be applied manually to your HTTP Load Balancer. These are included in the JSON download but cannot be pushed as standalone objects. See the gap report for details.
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Push Error */}
           {pushError && (
-            <div className="rounded-md bg-red-50 px-4 py-3 dark:bg-red-900/20">
-              <p className="text-sm text-red-700 dark:text-red-400">{pushError}</p>
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>{pushError}</AlertDescription>
+            </Alert>
           )}
 
           {/* Results */}
           {results && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 Push Results
               </h3>
               <div className="space-y-2">
@@ -300,25 +316,21 @@ export default function PushModal({ onClose }: PushModalProps) {
                   return (
                     <div key={r.object_type} className="flex items-start gap-2 text-sm">
                       {r.success ? (
-                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Check className="mt-0.5 size-4 shrink-0 text-green-600 dark:text-green-400" strokeWidth={2.5} />
                       ) : (
-                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <X className="mt-0.5 size-4 shrink-0 text-destructive" strokeWidth={2.5} />
                       )}
                       <div>
-                        <span className={r.success ? 'font-medium text-green-800 dark:text-green-300' : 'font-medium text-red-800 dark:text-red-300'}>
+                        <span className={r.success ? 'font-medium text-green-800 dark:text-green-300' : 'font-medium text-destructive'}>
                           {label}
                         </span>
                         {r.namespace && (
-                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                            → {r.namespace}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            &rarr; {r.namespace}
                           </span>
                         )}
                         {r.error && (
-                          <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{r.error}</p>
+                          <p className="mt-0.5 text-xs text-destructive">{r.error}</p>
                         )}
                       </div>
                     </div>
@@ -330,36 +342,35 @@ export default function PushModal({ onClose }: PushModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
-          <button
+        <DialogFooter>
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             {results ? 'Close' : 'Cancel'}
-          </button>
+          </Button>
           {!results && (
-            <button
+            <Button
               type="button"
               onClick={handlePush}
               disabled={pushing || selectedObjects.size === 0}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pushing ? (
                 <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <Loader2 className="size-4 animate-spin" />
                   Pushing...
                 </>
               ) : (
-                'Push to XC'
+                <>
+                  <Upload className="size-4" />
+                  Push to XC
+                </>
               )}
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

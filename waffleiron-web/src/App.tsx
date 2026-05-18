@@ -2,6 +2,11 @@ import { ConversionProvider, useConversion, type WizardStep } from './context/Co
 import UploadView from './views/UploadView';
 import AnalysisView from './views/AnalysisView';
 import ReviewView from './views/ReviewView';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Check, RotateCcw } from 'lucide-react';
+
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: 'Upload' },
   { key: 'analysis', label: 'Analysis' },
@@ -30,7 +35,7 @@ function WizardSteps() {
             {i > 0 && (
               <div
                 className={`h-px w-8 ${
-                  isCompleted ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'
+                  isCompleted ? 'bg-primary' : 'bg-border'
                 }`}
               />
             )}
@@ -40,30 +45,25 @@ function WizardSteps() {
               disabled={!isClickable}
               className={`flex items-center gap-1.5 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
             >
-              <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-indigo-600 text-white'
-                    : isCompleted
-                      ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-800'
-                      : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+              <Badge
+                variant={isActive ? 'default' : isCompleted ? 'secondary' : 'outline'}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                  isCompleted ? 'hover:bg-secondary/80' : ''
                 }`}
               >
                 {isCompleted ? (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Check className="size-3.5" strokeWidth={2.5} />
                 ) : (
                   i + 1
                 )}
-              </div>
+              </Badge>
               <span
                 className={`text-sm ${
                   isActive
-                    ? 'font-semibold text-gray-900 dark:text-white'
+                    ? 'font-semibold text-foreground'
                     : isCompleted
-                      ? 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-                      : 'text-gray-500 dark:text-gray-400'
+                      ? 'text-muted-foreground hover:text-foreground'
+                      : 'text-muted-foreground/60'
                 }`}
               >
                 {step.label}
@@ -89,8 +89,8 @@ function CurrentView() {
     default:
       return (
         <div className="flex-1 px-6 py-4">
-          <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-gray-300 p-12 text-center dark:border-gray-600">
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="mx-auto max-w-4xl rounded-lg border border-dashed border-border p-12 text-center">
+            <p className="text-muted-foreground">
               Step: <span className="font-semibold capitalize">{state.step}</span>
               {' '} — view not yet implemented
             </p>
@@ -104,8 +104,8 @@ function AppContent() {
   const { state, dispatch } = useConversion();
 
   return (
-    <div className="flex min-h-screen flex-col bg-white dark:bg-gray-900">
-      <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="bg-background px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -113,20 +113,23 @@ function AppContent() {
               alt="WaffleIron"
               className="h-8 w-8 rounded"
             />
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               WaffleIron
             </h1>
           </div>
           {state.step !== 'upload' && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => dispatch({ type: 'RESET' })}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
+              <RotateCcw className="size-3.5" />
               Start Over
-            </button>
+            </Button>
           )}
         </div>
       </header>
+      <Separator />
 
       <div className="mx-auto w-full max-w-5xl">
         <WizardSteps />

@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
 import { listNamespaces } from '../api';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 
 interface NamespaceSelectorProps {
   value: string;
@@ -56,14 +66,9 @@ export default function NamespaceSelector({
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Namespace
-        </label>
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+        <Label>Namespace</Label>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
           Loading namespaces...
         </div>
       </div>
@@ -72,42 +77,37 @@ export default function NamespaceSelector({
 
   if (fetchFailed) {
     return (
-      <div>
-        <label htmlFor="ns-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Namespace
-        </label>
-        <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+      <div className="space-y-1.5">
+        <Label htmlFor="ns-input">Namespace</Label>
+        <p className="text-xs text-yellow-600 dark:text-yellow-400">
           Could not load namespaces. Type a namespace manually.
         </p>
-        <input
+        <Input
           id="ns-input"
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. shared"
-          className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
         />
       </div>
     );
   }
 
   return (
-    <div>
-      <label htmlFor="ns-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Namespace
-      </label>
-      <select
-        id="ns-select"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
-      >
-        {namespaces?.map((ns) => (
-          <option key={ns} value={ns}>
-            {ns}
-          </option>
-        ))}
-      </select>
+    <div className="space-y-1.5">
+      <Label htmlFor="ns-select">Namespace</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id="ns-select" className="w-full">
+          <SelectValue placeholder="Select namespace" />
+        </SelectTrigger>
+        <SelectContent>
+          {namespaces?.map((ns) => (
+            <SelectItem key={ns} value={ns}>
+              {ns}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
