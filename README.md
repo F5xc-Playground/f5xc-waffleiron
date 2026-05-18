@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/waffleiron-light.jpg" alt="WaffleIron" width="200">
+</p>
+
 # WaffleIron
 
 Convert BIG-IP Advanced WAF (AWAF) policies to F5 Distributed Cloud (XC) WAF configurations.
