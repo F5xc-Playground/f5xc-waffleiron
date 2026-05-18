@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, type DragEvent } from 'react';
+import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface FileDropzoneProps {
   onFileSelected: (file: File) => void;
@@ -95,10 +97,10 @@ export default function FileDropzone({ onFileSelected, disabled = false }: FileD
         }}
         className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 transition-colors ${
           disabled
-            ? 'cursor-not-allowed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
+            ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground'
             : isDragging
-              ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30'
-              : 'border-gray-300 bg-white hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500'
+              ? 'border-primary bg-primary/5'
+              : 'border-border bg-card hover:border-primary/50'
         }`}
       >
         <input
@@ -110,58 +112,43 @@ export default function FileDropzone({ onFileSelected, disabled = false }: FileD
         />
 
         {/* Upload icon */}
-        <svg
-          className={`mb-3 h-10 w-10 ${
+        <Upload
+          className={`mb-3 size-10 ${
             isDragging
-              ? 'text-indigo-500 dark:text-indigo-400'
-              : 'text-gray-400 dark:text-gray-500'
+              ? 'text-primary'
+              : 'text-muted-foreground'
           }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
           strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-          />
-        </svg>
+        />
 
-        <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+        <p className="mb-1 text-sm font-medium text-card-foreground">
           {isDragging ? 'Drop file here' : 'Drag and drop your AWAF policy file'}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           or click to browse (.xml, .json)
         </p>
       </div>
 
       {selectedFile && (
-        <div className="mt-3 flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 dark:bg-gray-800">
-          <svg
-            className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="mt-3 flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+          <FileText
+            className="size-4 shrink-0 text-muted-foreground"
             strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-            />
-          </svg>
-          <span className="truncate text-sm text-gray-700 dark:text-gray-300">
+          />
+          <span className="truncate text-sm text-card-foreground">
             {selectedFile.name}
           </span>
-          <span className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">
+          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
             {formatFileSize(selectedFile.size)}
           </span>
         </div>
       )}
 
       {error && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="destructive" className="mt-2">
+          <AlertCircle />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
     </div>
   );
