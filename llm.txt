@@ -9,7 +9,7 @@ WaffleIron ingests AWAF XML or JSON policy exports and produces XC API-ready JSO
 AWAF and XC share ~8,000 attack signatures but use different policy models. Key translation constraints:
 
 - AWAF supports per-signature alarm-only mode (detect without blocking). XC does not — signatures either enforce (block) or must be excluded. Every alarm-only signature requires a decision: enforce, exclude, or defer.
-- AWAF positive security entities (URL/parameter/file-type with value constraints) have no XC equivalent. These are reported but cannot be translated.
+- AWAF positive security: disallowed file types and HTTP method restrictions translate to service policy DENY rules (gated on blocking mode + relevant violation blocking). Other positive security (URL/parameter value constraints, cookies, mandatory headers) has no XC equivalent and appears in the gap report.
 - CSRF and Data Guard settings live on the XC HTTP Load Balancer, not the WAF policy. These are output as a reference snippet (`http_lb_patch`) but cannot be pushed as standalone objects.
 
 ## Generated XC Objects
@@ -18,7 +18,7 @@ Each conversion can produce up to four objects:
 
 - `app_firewall` — always generated. Enforcement mode, signature sets, violations, bot protection, blocking page, data anonymization.
 - `waf_exclusion_policy` — generated when the policy has tuning overrides or alarm-only exclusion decisions. Per-signature and per-path exclusion rules. Omitted (None) when no exclusion rules exist.
-- `service_policy` — generated when the policy has IP allow/deny lists, geolocation blocks, or IP intelligence categories. Omitted when none exist.
+- `service_policy` — generated when the policy has IP allow/deny lists, geolocation blocks, IP intelligence categories, disallowed file types, or HTTP method restrictions. Omitted when none exist.
 - `http_lb_patch` — generated when CSRF or Data Guard is enabled. Reference snippet only — must be applied manually to an XC HTTP Load Balancer. Not pushable via API.
 
 ## CLI Usage

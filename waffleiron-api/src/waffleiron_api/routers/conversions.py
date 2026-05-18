@@ -176,6 +176,8 @@ async def get_analysis(request: Request, conversion_id: str):
         "summary": dataclasses.asdict(result.summary),
         "alarm_only_signatures": [dataclasses.asdict(s) for s in result.alarm_only_signatures],
         "alarm_only_violations": [dataclasses.asdict(v) for v in result.alarm_only_violations],
+        "positive_security": dataclasses.asdict(result.positive_security),
+        "positive_security_translated": dataclasses.asdict(result.positive_security_translated),
         "untranslatable": dataclasses.asdict(result.untranslatable),
         "bot_gaps": [dataclasses.asdict(g) for g in result.bot_gaps],
         "blocking_page_gaps": [dataclasses.asdict(g) for g in result.blocking_page_gaps],

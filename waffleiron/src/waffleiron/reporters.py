@@ -100,6 +100,15 @@ def _render_json(
             "file_type_count": analysis.positive_security.file_type_count,
             "cookie_count": analysis.positive_security.cookie_count,
             "mandatory_header_count": analysis.positive_security.mandatory_header_count,
+            "disallowed_file_type_count": analysis.positive_security.disallowed_file_type_count,
+            "url_method_restriction_count": analysis.positive_security.url_method_restriction_count,
+            "global_method_restriction": analysis.positive_security.global_method_restriction,
+            "translated": {
+                "filetype_deny_count": analysis.positive_security_translated.filetype_deny_count,
+                "method_deny_count": analysis.positive_security_translated.method_deny_count,
+                "filetype_gated": analysis.positive_security_translated.filetype_gated,
+                "method_gated": analysis.positive_security_translated.method_gated,
+            },
         },
         "untranslatable": {
             "custom_signature_count": analysis.untranslatable.custom_signature_count,
@@ -202,15 +211,41 @@ def _render_markdown(
 
     # --- Positive Security --------------------------------------------
     ps = analysis.positive_security
-    lines.append("## Positive Security (Cannot Translate)")
+    pst = analysis.positive_security_translated
+    lines.append("## Positive Security")
     lines.append("")
-    lines.append("These AWAF positive security entities have no XC equivalent:")
+
+    # Show what was translated
+    if pst.filetype_deny_count > 0 or pst.method_deny_count > 0:
+        lines.append("### Translated to Service Policy DENY Rules")
+        lines.append("")
+        lines.append("| Feature | Rules Generated |")
+        lines.append("|---------|---------------:|")
+        if pst.filetype_deny_count > 0:
+            lines.append(f"| Disallowed file types | {pst.filetype_deny_count} |")
+        if pst.method_deny_count > 0:
+            lines.append(f"| HTTP method restrictions | {pst.method_deny_count} |")
+        lines.append("")
+
+    # Show what was gated (not translated due to enforcement/violation config)
+    if pst.filetype_gated or pst.method_gated:
+        lines.append("### Not Translated (Enforcement Gating)")
+        lines.append("")
+        lines.append("These features were not translated because the policy is in transparent mode or the relevant violation is alarm-only:")
+        lines.append("")
+        if pst.filetype_gated:
+            lines.append(f"- **Disallowed file types** ({ps.disallowed_file_type_count}) — requires blocking mode + VIOL_FILETYPE blocking")
+        if pst.method_gated:
+            lines.append(f"- **HTTP method restrictions** — requires blocking mode + VIOL_METHOD blocking")
+        lines.append("")
+
+    # Show what cannot translate regardless
+    lines.append("### Cannot Translate (No XC Equivalent)")
     lines.append("")
     lines.append("| Entity Type | Count |")
     lines.append("|-------------|------:|")
     lines.append(f"| URL entities | {ps.url_count} ({ps.wildcard_url_count} wildcard) |")
     lines.append(f"| Parameters with value constraints | {ps.constrained_parameter_count} |")
-    lines.append(f"| File types | {ps.file_type_count} |")
     lines.append(f"| Cookies | {ps.cookie_count} |")
     lines.append(f"| Mandatory headers | {ps.mandatory_header_count} |")
     lines.append("")

@@ -38,8 +38,8 @@ waffleiron convert <policy-file> --namespace <ns> --output <dir> [options]
 output/
 ├── app_firewall.json          # Always generated
 ├── waf_exclusion_policy.json  # If policy has tuning or alarm-only exclusions
-├── service_policy.json        # If policy has IP lists, geolocation, or IP intelligence
-├── http_lb_patch.json         # If policy uses CSRF or Data Guard (reference only)
+├── service_policy.json        # If policy has IP lists, geo blocks, IP intel, file type denies, or method restrictions
+├── http_lb_patch.json         # If policy uses CSRF or Data Guard (reference only — not pushable)
 ├── gap_report.md              # Markdown gap report
 └── decisions.yaml             # Record of decisions applied (for reproducibility)
 ```

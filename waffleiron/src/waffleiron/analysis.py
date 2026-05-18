@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from waffleiron.model import AsmPolicy, CustomSignature, SignatureOverride
+from waffleiron.model import AsmPolicy, CustomSignature, EnforcementMode, SignatureOverride
 from waffleiron.translators.mappings import (
     ASM_IP_INTEL_TO_XC,
     find_unsupported_blocking_page_vars,
@@ -59,6 +59,19 @@ class PositiveSecuritySummary:
     file_type_count: int = 0
     cookie_count: int = 0
     mandatory_header_count: int = 0
+    disallowed_file_type_count: int = 0
+    url_method_restriction_count: int = 0
+    global_method_restriction: bool = False
+
+
+@dataclass
+class PositiveSecurityTranslated:
+    """Tracks which positive security features were translated to service policy rules."""
+
+    filetype_deny_count: int = 0
+    method_deny_count: int = 0
+    filetype_gated: bool = False
+    method_gated: bool = False
 
 
 @dataclass
@@ -125,6 +138,7 @@ class AnalysisResult:
     alarm_only_signatures: list[AlarmOnlySignature] = field(default_factory=list)
     alarm_only_violations: list[AlarmOnlyViolation] = field(default_factory=list)
     positive_security: PositiveSecuritySummary = field(default_factory=PositiveSecuritySummary)
+    positive_security_translated: PositiveSecurityTranslated = field(default_factory=PositiveSecurityTranslated)
     untranslatable: UntranslatableSummary = field(default_factory=UntranslatableSummary)
     bot_gaps: list[BotGap] = field(default_factory=list)
     blocking_page_gaps: list[BlockingPageGap] = field(default_factory=list)
@@ -204,6 +218,8 @@ def _build_positive_security(policy: AsmPolicy) -> PositiveSecuritySummary:
         if u.type == "wildcard" or (u.name and "*" in u.name)
     )
     mandatory_headers = sum(1 for h in entities.headers if h.mandatory)
+    disallowed_file_types = sum(1 for ft in entities.file_types if ft.allowed is False)
+    url_method_restrictions = sum(1 for u in entities.urls if u.method is not None)
 
     return PositiveSecuritySummary(
         url_count=len(entities.urls),
@@ -213,6 +229,9 @@ def _build_positive_security(policy: AsmPolicy) -> PositiveSecuritySummary:
         file_type_count=len(entities.file_types),
         cookie_count=len(entities.cookies),
         mandatory_header_count=mandatory_headers,
+        disallowed_file_type_count=disallowed_file_types,
+        url_method_restriction_count=url_method_restrictions,
+        global_method_restriction=len(entities.methods) > 0,
     )
 
 
@@ -224,6 +243,40 @@ def _build_untranslatable(policy: AsmPolicy) -> UntranslatableSummary:
         session_hijacking_enabled=policy.session_tracking.hijacking_prevention,
         brute_force_enabled=policy.brute_force.enabled,
         custom_signatures=list(policy.custom_signatures),
+    )
+
+
+def _is_violation_blocking(policy: AsmPolicy, violation_name: str) -> bool:
+    """Return True if the violation is blocking. Defaults to True if not present."""
+    for v in policy.violations:
+        if v.name == violation_name:
+            return v.block
+    return True
+
+
+def _build_positive_security_translated(policy: AsmPolicy) -> PositiveSecurityTranslated:
+    """Determine which positive security features translate to service policy rules."""
+    is_blocking = policy.enforcement_mode == EnforcementMode.BLOCKING
+
+    filetype_can_enforce = is_blocking and _is_violation_blocking(policy, "VIOL_FILETYPE")
+    method_can_enforce = is_blocking and _is_violation_blocking(policy, "VIOL_METHOD")
+
+    disallowed_ft_count = sum(1 for ft in policy.entities.file_types if ft.allowed is False)
+    method_url_count = sum(1 for u in policy.entities.urls if u.method is not None)
+    has_global_methods = len(policy.entities.methods) > 0
+
+    ft_translated = disallowed_ft_count if filetype_can_enforce else 0
+    method_translated = (
+        (method_url_count + (1 if has_global_methods else 0))
+        if method_can_enforce
+        else 0
+    )
+
+    return PositiveSecurityTranslated(
+        filetype_deny_count=ft_translated,
+        method_deny_count=method_translated,
+        filetype_gated=not filetype_can_enforce and disallowed_ft_count > 0,
+        method_gated=not method_can_enforce and (method_url_count > 0 or has_global_methods),
     )
 
 
@@ -413,6 +466,7 @@ def analyze(policy: AsmPolicy) -> AnalysisResult:
     alarm_sigs = _collect_alarm_only_signatures(policy)
     alarm_viols = _collect_alarm_only_violations(policy)
     pos_sec = _build_positive_security(policy)
+    pos_sec_translated = _build_positive_security_translated(policy)
     untranslatable = _build_untranslatable(policy)
     bot_gaps = _collect_bot_gaps(policy)
     blocking_page_gaps = _collect_blocking_page_gaps(policy)
@@ -424,6 +478,7 @@ def analyze(policy: AsmPolicy) -> AnalysisResult:
         alarm_only_signatures=alarm_sigs,
         alarm_only_violations=alarm_viols,
         positive_security=pos_sec,
+        positive_security_translated=pos_sec_translated,
         untranslatable=untranslatable,
         bot_gaps=bot_gaps,
         blocking_page_gaps=blocking_page_gaps,

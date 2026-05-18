@@ -1,14 +1,16 @@
 """ServicePolicyTranslator: converts AsmPolicy → XC service_policy dict.
 
-Handles IP whitelists, geolocation blocks, and IP intelligence threat categories.
+Handles IP whitelists, geolocation blocks, IP intelligence threat categories,
+file type deny rules, and URL method restriction rules.
 Returns None when none of these features are configured.
 """
 
 from __future__ import annotations
 
 import ipaddress
+import re
 
-from waffleiron.model import AsmPolicy
+from waffleiron.model import AsmPolicy, EnforcementMode
 from waffleiron.translators.mappings import ASM_IP_INTEL_TO_XC
 from waffleiron.translators.utils import sanitize_xc_name
 
@@ -184,6 +186,117 @@ def _rule_name_for_threat(category_name: str) -> str:
     return sanitize_xc_name(f"deny-threat-{category_name}")
 
 
+def _is_violation_blocking(policy: AsmPolicy, violation_name: str) -> bool:
+    """Return True if the named violation is in blocking mode (block=True).
+
+    If the violation is not present in the policy, we assume it defaults to
+    blocking (AWAF default for most violations in blocking mode).
+    """
+    for v in policy.violations:
+        if v.name == violation_name:
+            return v.block
+    return True
+
+
+def _can_enforce_positive_security(policy: AsmPolicy, violation_name: str) -> bool:
+    """Return True if positive security rules for this violation can be enforced.
+
+    Requires: enforcement mode is blocking AND the violation is not alarm-only.
+    """
+    if policy.enforcement_mode != EnforcementMode.BLOCKING:
+        return False
+    return _is_violation_blocking(policy, violation_name)
+
+
+def _filetype_to_regex(ext: str) -> str:
+    """Convert a file extension to a path regex matching that extension."""
+    escaped = re.escape(ext)
+    return f".*\\.{escaped}(\\?.*)?$"
+
+
+def _build_filetype_deny_rules(policy: AsmPolicy) -> list[dict]:
+    """Generate DENY rules for disallowed file types."""
+    if not _can_enforce_positive_security(policy, "VIOL_FILETYPE"):
+        return []
+
+    rules: list[dict] = []
+    for ft in policy.entities.file_types:
+        if ft.allowed is False:
+            path_regex = _filetype_to_regex(ft.name)
+            rule = {
+                "metadata": {"name": sanitize_xc_name(f"deny-filetype-{ft.name}")},
+                "spec": {
+                    "action": "DENY",
+                    "any_client": {},
+                    "path": {"regex_values": [path_regex]},
+                    "waf_action": {"none": {}},
+                },
+            }
+            rules.append(rule)
+    return rules
+
+
+_ALL_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"})
+
+
+def _build_method_deny_rules(policy: AsmPolicy) -> list[dict]:
+    """Generate DENY rules for disallowed HTTP methods."""
+    if not _can_enforce_positive_security(policy, "VIOL_METHOD"):
+        return []
+
+    rules: list[dict] = []
+
+    # Global method allowlist → deny everything not in it
+    if policy.entities.methods:
+        allowed_global = {m.name.upper() for m in policy.entities.methods}
+        denied_global = _ALL_METHODS - allowed_global
+        if denied_global:
+            rule = {
+                "metadata": {"name": sanitize_xc_name("deny-method-global")},
+                "spec": {
+                    "action": "DENY",
+                    "any_client": {},
+                    "http_method": {"methods": sorted(denied_global)},
+                    "waf_action": {"none": {}},
+                },
+            }
+            rules.append(rule)
+
+    # Per-URL method restrictions
+    if policy.entities.methods:
+        allowed_global = {m.name.upper() for m in policy.entities.methods}
+    else:
+        allowed_global = set()
+
+    for url in policy.entities.urls:
+        if url.method is None:
+            continue
+        if url.method == "*":
+            continue
+        if url.name == "*":
+            continue
+        url_allowed = {url.method.upper()}
+        denied_for_url = (allowed_global or _ALL_METHODS) - url_allowed
+        if not denied_for_url:
+            continue
+
+        from waffleiron.translators.utils import path_slug
+        slug = path_slug(url.name)
+        rule = {
+            "metadata": {"name": sanitize_xc_name(f"deny-method-{slug}")},
+            "spec": {
+                "action": "DENY",
+                "any_client": {},
+                "path": {"prefix_values": [url.name]},
+                "http_method": {"methods": sorted(denied_for_url)},
+                "waf_action": {"none": {}},
+            },
+        }
+        rules.append(rule)
+
+    return rules
+
+
 # ---------------------------------------------------------------------------
 # ServicePolicyTranslator
 # ---------------------------------------------------------------------------
@@ -264,6 +377,12 @@ class ServicePolicyTranslator:
                 },
             }
             rules.append(rule)
+
+        # --- 4. File type deny rules (positive security) ---
+        rules.extend(_build_filetype_deny_rules(policy))
+
+        # --- 5. HTTP method deny rules (positive security) ---
+        rules.extend(_build_method_deny_rules(policy))
 
         if not rules:
             return None

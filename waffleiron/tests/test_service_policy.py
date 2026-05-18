@@ -5,10 +5,16 @@ from __future__ import annotations
 import pytest
 
 from waffleiron.model import (
+    EntityCollection,
+    EnforcementMode,
+    FileTypeEntity,
     GeolocationConfig,
     IpIntelCategory,
     IpIntelligenceConfig,
     IpWhitelistEntry,
+    MethodEntity,
+    UrlEntity,
+    Violation,
 )
 from waffleiron.translators.service_policy import ServicePolicyTranslator
 
@@ -325,3 +331,231 @@ class TestRuleOrdering:
         threat_indices = [i for i, r in enumerate(rules) if self._is_threat_rule(r)]
         if allow_indices and threat_indices:
             assert max(allow_indices) < min(threat_indices)
+
+
+# ---------------------------------------------------------------------------
+# TestFileTypeDenyRules
+# ---------------------------------------------------------------------------
+
+
+class TestFileTypeDenyRules:
+    def test_disallowed_filetype_generates_deny_rule(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)]
+            ),
+            violations=[Violation(name="VIOL_FILETYPE", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is not None
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        assert len(ft_rules) == 1
+        assert ft_rules[0]["spec"]["action"] == "DENY"
+        assert "path" in ft_rules[0]["spec"]
+        assert "exe" in ft_rules[0]["spec"]["path"]["regex_values"][0]
+
+    def test_allowed_filetype_no_rule(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="pdf", allowed=True)]
+            ),
+            violations=[Violation(name="VIOL_FILETYPE", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_multiple_disallowed_filetypes(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[
+                    FileTypeEntity(name="exe", allowed=False),
+                    FileTypeEntity(name="bat", allowed=False),
+                    FileTypeEntity(name="pdf", allowed=True),
+                ]
+            ),
+            violations=[Violation(name="VIOL_FILETYPE", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        assert len(ft_rules) == 2
+
+    def test_filetype_gated_by_transparent_mode(self):
+        policy = make_minimal_policy(
+            enforcement_mode=EnforcementMode.TRANSPARENT,
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)]
+            ),
+            violations=[Violation(name="VIOL_FILETYPE", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_filetype_gated_by_alarm_only_violation(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)]
+            ),
+            violations=[Violation(name="VIOL_FILETYPE", alarm=True, block=False)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_filetype_allowed_when_violation_absent(self):
+        """When VIOL_FILETYPE is not in the policy violations, assume blocking."""
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)]
+            ),
+            violations=[],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is not None
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        assert len(ft_rules) == 1
+
+    def test_filetype_regex_pattern(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)]
+            ),
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        regex = ft_rules[0]["spec"]["path"]["regex_values"][0]
+        assert regex == r".*\.exe(\?.*)?$"
+
+    def test_filetype_special_chars_escaped(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="tar.gz", allowed=False)]
+            ),
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        regex = ft_rules[0]["spec"]["path"]["regex_values"][0]
+        assert r"tar\.gz" in regex
+
+
+# ---------------------------------------------------------------------------
+# TestMethodDenyRules
+# ---------------------------------------------------------------------------
+
+
+class TestMethodDenyRules:
+    def test_global_method_restriction_generates_deny(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")]
+            ),
+            violations=[Violation(name="VIOL_METHOD", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is not None
+        rules = result["spec"]["rule_list"]["rules"]
+        method_rules = [r for r in rules if "deny-method" in r["metadata"]["name"]]
+        assert len(method_rules) == 1
+        assert method_rules[0]["metadata"]["name"] == "deny-method-global"
+        denied_methods = method_rules[0]["spec"]["http_method"]["methods"]
+        assert "GET" not in denied_methods
+        assert "POST" not in denied_methods
+        assert "DELETE" in denied_methods
+        assert "PUT" in denied_methods
+
+    def test_per_url_method_restriction(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                urls=[UrlEntity(name="/api/users", method="GET")],
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")],
+            ),
+            violations=[Violation(name="VIOL_METHOD", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        url_method_rules = [
+            r for r in rules
+            if "deny-method" in r["metadata"]["name"] and r["metadata"]["name"] != "deny-method-global"
+        ]
+        assert len(url_method_rules) == 1
+        rule = url_method_rules[0]
+        assert rule["spec"]["path"]["prefix_values"] == ["/api/users"]
+        assert "POST" in rule["spec"]["http_method"]["methods"]
+        assert "GET" not in rule["spec"]["http_method"]["methods"]
+
+    def test_method_gated_by_transparent_mode(self):
+        policy = make_minimal_policy(
+            enforcement_mode=EnforcementMode.TRANSPARENT,
+            entities=EntityCollection(
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")]
+            ),
+            violations=[Violation(name="VIOL_METHOD", alarm=True, block=True)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_method_gated_by_alarm_only_violation(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")]
+            ),
+            violations=[Violation(name="VIOL_METHOD", alarm=True, block=False)],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_method_allowed_when_violation_absent(self):
+        """When VIOL_METHOD is not in the policy violations, assume blocking."""
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")]
+            ),
+            violations=[],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is not None
+
+    def test_no_method_rules_when_no_methods_defined(self):
+        policy = make_minimal_policy(
+            entities=EntityCollection(methods=[]),
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        assert result is None
+
+    def test_url_without_method_field_no_rule(self):
+        """URLs without a method restriction don't generate per-URL deny rules."""
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                urls=[UrlEntity(name="/api/data", method=None)],
+                methods=[MethodEntity(name="GET")],
+            ),
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        url_method_rules = [
+            r for r in rules
+            if "deny-method" in r["metadata"]["name"] and r["metadata"]["name"] != "deny-method-global"
+        ]
+        assert len(url_method_rules) == 0
+
+    def test_combined_filetype_and_method_rules(self):
+        """Both rule types can coexist in the same service policy."""
+        policy = make_minimal_policy(
+            entities=EntityCollection(
+                file_types=[FileTypeEntity(name="exe", allowed=False)],
+                methods=[MethodEntity(name="GET"), MethodEntity(name="POST")],
+            ),
+            violations=[
+                Violation(name="VIOL_FILETYPE", alarm=True, block=True),
+                Violation(name="VIOL_METHOD", alarm=True, block=True),
+            ],
+        )
+        result = ServicePolicyTranslator.translate(policy, namespace="ns")
+        rules = result["spec"]["rule_list"]["rules"]
+        ft_rules = [r for r in rules if "deny-filetype" in r["metadata"]["name"]]
+        method_rules = [r for r in rules if "deny-method" in r["metadata"]["name"]]
+        assert len(ft_rules) == 1
+        assert len(method_rules) == 1
