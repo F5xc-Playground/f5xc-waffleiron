@@ -51,18 +51,18 @@ export default function TranslatedWithLossPanel({ untranslatable, warnings }: Tr
             {activeItems.map((item) => (
               <Alert
                 key={item.key}
-                className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-900/10 dark:text-yellow-200"
+                className="border-yellow-200 bg-yellow-50 dark:border-yellow-700/40 dark:bg-yellow-900/20"
               >
                 <AlertTriangle className="text-yellow-600 dark:text-yellow-400" />
-                <AlertTitle className="text-sm font-medium">
+                <AlertTitle className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
                   {item.label}
                 </AlertTitle>
                 <AlertDescription>
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                    <span className="font-medium">ASM:</span> {item.asmDescription}
+                  <p className="text-sm text-foreground">
+                    <span className="font-semibold text-yellow-600 dark:text-yellow-400">ASM:</span> {item.asmDescription}
                   </p>
-                  <p className="mt-0.5 text-xs text-yellow-700 dark:text-yellow-300">
-                    <span className="font-medium">XC:</span> {item.xcAlternative}
+                  <p className="mt-0.5 text-sm text-foreground">
+                    <span className="font-semibold text-yellow-600 dark:text-yellow-400">XC:</span> {item.xcAlternative}
                   </p>
                 </AlertDescription>
               </Alert>
@@ -79,12 +79,12 @@ export default function TranslatedWithLossPanel({ untranslatable, warnings }: Tr
               {warnings.map((w) => (
                 <Alert
                   key={w.resource}
-                  className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/10 dark:text-amber-200"
+                  className="border-yellow-200 bg-yellow-50 dark:border-yellow-700/40 dark:bg-yellow-900/20"
                 >
-                  <AlertTitle className="text-sm">
+                  <AlertTitle className="text-sm text-foreground">
                     {w.message}
                   </AlertTitle>
-                  <AlertDescription className="text-xs text-amber-600 dark:text-amber-400">
+                  <AlertDescription className="text-sm text-muted-foreground">
                     Current: {w.count} — XC limit: {w.limit}
                   </AlertDescription>
                 </Alert>

@@ -269,12 +269,12 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
 
           <CardContent className="space-y-4">
             {prot.partial.map((p) => (
-              <div key={p.key} className="rounded-md border border-yellow-200 bg-yellow-50/50 p-4 dark:border-yellow-800/30 dark:bg-yellow-900/10">
+              <div key={p.key} className="rounded-md border border-yellow-200 bg-yellow-50/50 p-4 dark:border-yellow-700/40 dark:bg-yellow-900/20">
                 <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">{p.label}</h3>
 
                 {p.key === 'bot_defense' && (
                   <>
-                    <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
+                    <p className="mt-1 text-sm text-foreground">
                       Bot categories are translated, but the following AWAF actions have no XC equivalent and will be omitted.
                     </p>
                     <Table className="mt-2 text-xs">
@@ -302,7 +302,7 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
 
                 {p.key === 'blocking_page' && (
                   <>
-                    <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
+                    <p className="mt-1 text-sm text-foreground">
                       XC only supports <code className="rounded bg-yellow-100 px-1 dark:bg-yellow-900/30">{'{{request_id}}'}</code> in custom blocking pages. The following AWAF variables will render as literal text.
                     </p>
                     <Table className="mt-2 text-xs">
@@ -328,7 +328,7 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
 
                 {p.key === 'ip_intelligence' && (
                   <>
-                    <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
+                    <p className="mt-1 text-sm text-foreground">
                       The following AWAF IP intelligence categories have no equivalent XC threat category and will be skipped.
                     </p>
                     <Table className="mt-2 text-xs">
@@ -370,35 +370,35 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
 
           <CardContent className="space-y-3">
             {prot.none.includes('Brute Force') && (
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4">
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
                 <h3 className="text-sm font-semibold text-destructive">Brute Force</h3>
-                <p className="mt-1 text-xs text-destructive/80">
-                  <span className="font-medium">AWAF:</span> Detects login brute-force attacks by tracking failed attempts over a detection window.
+                <p className="mt-1 text-sm text-foreground">
+                  <span className="font-semibold text-destructive">AWAF:</span> Detects login brute-force attacks by tracking failed attempts over a detection window.
                 </p>
-                <p className="mt-0.5 text-xs text-destructive/80">
-                  <span className="font-medium">XC:</span> Rate limiting is available at the load balancer and service policy levels, but AWAF login-URL-based brute force config cannot be directly mapped.
+                <p className="mt-0.5 text-sm text-foreground">
+                  <span className="font-semibold text-destructive">XC:</span> Rate limiting is available at the load balancer and service policy levels, but AWAF login-URL-based brute force config cannot be directly mapped.
                 </p>
               </div>
             )}
 
             {prot.none.includes('Session Tracking') && (
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4">
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
                 <h3 className="text-sm font-semibold text-destructive">Session Tracking</h3>
-                <p className="mt-1 text-xs text-destructive/80">
-                  <span className="font-medium">AWAF:</span> Tracks user sessions to detect anomalies like session hijacking and session awareness.
+                <p className="mt-1 text-sm text-foreground">
+                  <span className="font-semibold text-destructive">AWAF:</span> Tracks user sessions to detect anomalies like session hijacking and session awareness.
                 </p>
-                <p className="mt-0.5 text-xs text-destructive/80">
-                  <span className="font-medium">XC:</span> Client-side JavaScript challenge and fingerprinting exist, but these are configured at the load balancer level — not migrated from the AWAF policy.
+                <p className="mt-0.5 text-sm text-foreground">
+                  <span className="font-semibold text-destructive">XC:</span> Client-side JavaScript challenge and fingerprinting exist, but these are configured at the load balancer level — not migrated from the AWAF policy.
                 </p>
               </div>
             )}
 
             {untranslatable.custom_signature_count > 0 && (
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4">
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4">
                 <h3 className="text-sm font-semibold text-destructive">
                   Custom Signatures ({untranslatable.custom_signature_count})
                 </h3>
-                <p className="mt-1 text-xs text-destructive/80">
+                <p className="mt-1 text-sm text-foreground">
                   Custom AWAF signatures have no equivalent in XC WAF and will be omitted from the conversion.
                 </p>
                 {untranslatable.custom_signatures.length > 0 && (
@@ -431,9 +431,9 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
               <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Limit Warnings</h3>
               <div className="mt-2 space-y-2">
                 {warnings.map((w) => (
-                  <div key={w.resource} className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-900/50 dark:bg-yellow-900/10">
-                    <p className="text-xs text-yellow-800 dark:text-yellow-200">{w.message}</p>
-                    <p className="mt-0.5 text-xs text-yellow-600 dark:text-yellow-400">Current: {w.count} — XC limit: {w.limit}</p>
+                  <div key={w.resource} className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-700/40 dark:bg-yellow-900/20">
+                    <p className="text-sm text-foreground">{w.message}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">Current: {w.count} — XC limit: {w.limit}</p>
                   </div>
                 ))}
               </div>

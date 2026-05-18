@@ -283,11 +283,11 @@ export default function PushModal({ onClose }: PushModalProps) {
           {/* HTTP LB Patch note */}
           {state.outputs?.http_lb_patch && (
             <Alert>
-              <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
-              <AlertTitle className="text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400" />
+              <AlertTitle className="text-yellow-800 dark:text-yellow-300">
                 HTTP LB Patch
               </AlertTitle>
-              <AlertDescription className="text-amber-700 dark:text-amber-400">
+              <AlertDescription className="text-foreground">
                 This policy includes CSRF and/or Data Guard settings that must be applied manually to your HTTP Load Balancer. These are included in the JSON download but cannot be pushed as standalone objects. See the gap report for details.
               </AlertDescription>
             </Alert>

@@ -79,7 +79,7 @@ export default function NamespaceSelector({
     return (
       <div className="space-y-1.5">
         <Label htmlFor="ns-input">Namespace</Label>
-        <p className="text-xs text-amber-600 dark:text-amber-400">
+        <p className="text-xs text-yellow-600 dark:text-yellow-400">
           Could not load namespaces. Type a namespace manually.
         </p>
         <Input

@@ -26,7 +26,7 @@ const PROTECTIONS: { key: string; label: string; base: TranslationStatus }[] = [
 const STATUS_BADGE_VARIANT: Record<TranslationStatus, { className: string }> = {
   full: { className: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
   partial: { className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  none: { className: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+  none: { className: 'bg-destructive/5 text-destructive' },
 };
 
 const STATUS_LABELS: Record<TranslationStatus, string> = {
@@ -135,7 +135,7 @@ export default function PolicyInfoCard({ info, botGaps, blockingPageGaps, ipInte
                     ))}
                   </div>
                   {status === 'partial' && botGaps.length > 0 && (
-                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-700/40 dark:bg-yellow-900/20">
                       <Table className="text-xs">
                         <TableHeader>
                           <TableRow className="border-yellow-200 dark:border-yellow-800/30">
@@ -161,7 +161,7 @@ export default function PolicyInfoCard({ info, botGaps, blockingPageGaps, ipInte
                     </div>
                   )}
                   {status === 'partial' && blockingPageGaps.length > 0 && (
-                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-700/40 dark:bg-yellow-900/20">
                       <Table className="text-xs">
                         <TableHeader>
                           <TableRow className="border-yellow-200 dark:border-yellow-800/30">
@@ -185,7 +185,7 @@ export default function PolicyInfoCard({ info, botGaps, blockingPageGaps, ipInte
                     </div>
                   )}
                   {status === 'partial' && ipIntelGaps.length > 0 && (
-                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-800/50 dark:bg-yellow-900/10">
+                    <div className="mt-2 ml-1 rounded-md border border-yellow-200 bg-yellow-50/50 p-3 dark:border-yellow-700/40 dark:bg-yellow-900/20">
                       <Table className="text-xs">
                         <TableHeader>
                           <TableRow className="border-yellow-200 dark:border-yellow-800/30">

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Check, Copy, Pencil, RotateCcw, Save, X } from 'lucide-react';
 import { validateXCObject } from '../schemas/validate';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -113,12 +113,12 @@ export default function JsonViewer({ data, title, objectType, onSave }: JsonView
   return (
     <Card className="gap-0 overflow-hidden rounded-lg py-0">
       {/* Header */}
-      <CardHeader className="flex-row items-center justify-between border-b bg-muted/60 px-4 py-2">
+      <div className="flex items-center justify-between border-b bg-muted/60 px-4 py-2">
         <div className="flex items-center gap-2">
           {title && (
-            <CardTitle className="text-sm text-muted-foreground">
+            <span className="text-sm font-semibold text-muted-foreground">
               {title}
-            </CardTitle>
+            </span>
           )}
           {editing && (
             <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
@@ -188,11 +188,11 @@ export default function JsonViewer({ data, title, objectType, onSave }: JsonView
             </Button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
       {/* Errors */}
       {(parseError || validationErrors.length > 0) && (
-        <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2">
+        <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2">
           {parseError && (
             <p className="text-xs font-medium text-destructive">
               JSON Error: {parseError}

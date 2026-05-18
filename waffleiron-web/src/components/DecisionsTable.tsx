@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { AlarmOnlySignature, AlarmOnlyViolation, DecisionRequest } from '../types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -84,13 +84,13 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
       {/* Signatures section */}
       {sigRows.length > 0 && (
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="text-sm">
+          <div className="flex items-center justify-between px-6 py-4">
+            <span className="text-sm font-semibold">
               Signatures
               <Badge variant="secondary" className="ml-2">
                 {sigRows.length} alarm-only
               </Badge>
-            </CardTitle>
+            </span>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Set all:</span>
               <Select
@@ -109,7 +109,7 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
                 </SelectContent>
               </Select>
             </div>
-          </CardHeader>
+          </div>
 
           <CardContent>
             <Table>
@@ -154,13 +154,13 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
       {/* Violations section */}
       {violRows.length > 0 && (
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="text-sm">
+          <div className="flex items-center justify-between px-6 py-4">
+            <span className="text-sm font-semibold">
               Violations
               <Badge variant="secondary" className="ml-2">
                 {violRows.length} alarm-only
               </Badge>
-            </CardTitle>
+            </span>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Set all:</span>
               <Select
@@ -179,7 +179,7 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
                 </SelectContent>
               </Select>
             </div>
-          </CardHeader>
+          </div>
 
           <CardContent>
             <Table>

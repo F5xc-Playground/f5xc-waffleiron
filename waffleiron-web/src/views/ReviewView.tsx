@@ -324,7 +324,7 @@ export default function ReviewView() {
                 type="button"
                 onClick={handleDownloadZip}
                 disabled={zipping}
-                className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-5 py-5 text-center shadow-sm transition-colors hover:border-border/80 hover:bg-accent"
+                className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card px-5 py-5 text-center shadow-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
               >
                 {zipping ? (
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -374,8 +374,8 @@ export default function ReviewView() {
                 {tabs.map((tab) => (
                   <TabsContent key={tab.key} value={tab.key}>
                     {tab.key === 'http_lb_patch' && (
-                      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
-                        <p className="text-sm text-amber-800 dark:text-amber-300">
+                      <div className="mb-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 dark:border-yellow-700/40 dark:bg-yellow-900/20">
+                        <p className="text-sm text-foreground">
                           <span className="font-semibold">Not pushed to XC.</span> CSRF and Data Guard are configured at the HTTP Load Balancer level in XC, not on the WAF policy. Apply these settings manually to your HTTP LB after deployment. This snippet is included in the JSON download for reference.
                         </p>
                       </div>
