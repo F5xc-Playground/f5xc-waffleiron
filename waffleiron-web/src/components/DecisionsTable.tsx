@@ -1,5 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { AlarmOnlySignature, AlarmOnlyViolation, DecisionRequest } from '../types';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 type SignatureAction = 'exclude' | 'enforce';
 type ViolationAction = 'disable' | 'enforce';
@@ -47,6 +51,9 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
     })),
   );
 
+  const [bulkSigKey, setBulkSigKey] = useState(0);
+  const [bulkViolKey, setBulkViolKey] = useState(0);
+
   useEffect(() => {
     onDecisionsChange({
       alarm_only_signatures: sigRows.map((r) => ({ sig_id: r.sig_id, action: r.action })),
@@ -72,130 +79,142 @@ export default function DecisionsTable({ signatures, violations, onDecisionsChan
     setViolRows((prev) => prev.map((r) => ({ ...r, action })));
   }, []);
 
-  const thClass = 'px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400';
-
   return (
     <div className="space-y-6">
       {/* Signatures section */}
       {sigRows.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-sm">
               Signatures
-              <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+              <Badge variant="secondary" className="ml-2">
                 {sigRows.length} alarm-only
-              </span>
-            </h3>
+              </Badge>
+            </CardTitle>
             <div className="flex items-center gap-2 text-sm">
-              <label className="text-gray-600 dark:text-gray-400">Set all:</label>
-              <select
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                onChange={(e) => {
-                  if (e.target.value) bulkSetSigs(e.target.value as SignatureAction);
-                  e.target.value = '';
+              <span className="text-muted-foreground">Set all:</span>
+              <Select
+                key={bulkSigKey}
+                onValueChange={(val) => {
+                  bulkSetSigs(val as SignatureAction);
+                  setBulkSigKey((k) => k + 1);
                 }}
-                defaultValue=""
               >
-                <option value="" disabled>Select...</option>
-                <option value="exclude">Exclude</option>
-                <option value="enforce">Enforce</option>
-              </select>
+                <SelectTrigger size="sm" className="w-[110px]">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exclude">Exclude</SelectItem>
+                  <SelectItem value="enforce">Enforce</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </CardHeader>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className={thClass}>ID</th>
-                  <th className={thClass}>Scope</th>
-                  <th className={`${thClass} w-32`}>Decision</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs uppercase tracking-wider">ID</TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider">Scope</TableHead>
+                  <TableHead className="w-32 text-xs uppercase tracking-wider">Decision</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sigRows.map((row) => (
-                  <tr key={`${row.sig_id}-${row.scope}`}>
-                    <td className="whitespace-nowrap px-3 py-2 font-mono text-gray-900 dark:text-white">
+                  <TableRow key={`${row.sig_id}-${row.scope}`}>
+                    <TableCell className="font-mono text-foreground">
                       {row.sig_id}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-gray-700 dark:text-gray-300">
-                      <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-700">{row.scope}</code>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <select
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.scope}</code>
+                    </TableCell>
+                    <TableCell>
+                      <Select
                         value={row.action}
-                        onChange={(e) => updateSig(row.sig_id, e.target.value as SignatureAction)}
-                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                        onValueChange={(val) => updateSig(row.sig_id, val as SignatureAction)}
                       >
-                        <option value="exclude">Exclude</option>
-                        <option value="enforce">Enforce</option>
-                      </select>
-                    </td>
-                  </tr>
+                        <SelectTrigger size="sm" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="exclude">Exclude</SelectItem>
+                          <SelectItem value="enforce">Enforce</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Violations section */}
       {violRows.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-sm">
               Violations
-              <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+              <Badge variant="secondary" className="ml-2">
                 {violRows.length} alarm-only
-              </span>
-            </h3>
+              </Badge>
+            </CardTitle>
             <div className="flex items-center gap-2 text-sm">
-              <label className="text-gray-600 dark:text-gray-400">Set all:</label>
-              <select
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                onChange={(e) => {
-                  if (e.target.value) bulkSetViols(e.target.value as ViolationAction);
-                  e.target.value = '';
+              <span className="text-muted-foreground">Set all:</span>
+              <Select
+                key={bulkViolKey}
+                onValueChange={(val) => {
+                  bulkSetViols(val as ViolationAction);
+                  setBulkViolKey((k) => k + 1);
                 }}
-                defaultValue=""
               >
-                <option value="" disabled>Select...</option>
-                <option value="disable">Disable</option>
-                <option value="enforce">Enforce</option>
-              </select>
+                <SelectTrigger size="sm" className="w-[110px]">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="disable">Disable</SelectItem>
+                  <SelectItem value="enforce">Enforce</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </CardHeader>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className={thClass}>Violation</th>
-                  <th className={`${thClass} w-32`}>Decision</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs uppercase tracking-wider">Violation</TableHead>
+                  <TableHead className="w-32 text-xs uppercase tracking-wider">Decision</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {violRows.map((row) => (
-                  <tr key={row.violation_name}>
-                    <td className="px-3 py-2 font-mono text-gray-900 dark:text-white">
+                  <TableRow key={row.violation_name}>
+                    <TableCell className="font-mono text-foreground">
                       {row.violation_name}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <select
+                    </TableCell>
+                    <TableCell>
+                      <Select
                         value={row.action}
-                        onChange={(e) => updateViol(row.violation_name, e.target.value as ViolationAction)}
-                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                        onValueChange={(val) => updateViol(row.violation_name, val as ViolationAction)}
                       >
-                        <option value="disable">Disable</option>
-                        <option value="enforce">Enforce</option>
-                      </select>
-                    </td>
-                  </tr>
+                        <SelectTrigger size="sm" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="disable">Disable</SelectItem>
+                          <SelectItem value="enforce">Enforce</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
