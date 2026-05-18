@@ -1,5 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
+import { Check, Copy, Pencil, RotateCcw, Save, X } from 'lucide-react';
 import { validateXCObject } from '../schemas/validate';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface JsonViewerProps {
   data: object;
@@ -25,7 +29,7 @@ function syntaxHighlight(json: string): string {
       } else if (/true|false/.test(match)) {
         cls = 'text-purple-600 dark:text-purple-400'; // boolean
       } else if (/null/.test(match)) {
-        cls = 'text-gray-400 dark:text-gray-500'; // null
+        cls = 'text-muted-foreground'; // null
       }
       return `<span class="${cls}">${match}</span>`;
     },
@@ -107,102 +111,100 @@ export default function JsonViewer({ data, title, objectType, onSave }: JsonView
   const hasChanges = editing && editValue !== originalValue;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+    <Card className="gap-0 overflow-hidden rounded-lg py-0">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800/60">
+      <CardHeader className="flex-row items-center justify-between border-b bg-muted/60 px-4 py-2">
         <div className="flex items-center gap-2">
           {title && (
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <CardTitle className="text-sm text-muted-foreground">
               {title}
-            </h3>
+            </CardTitle>
           )}
           {editing && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
               Editing
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-1">
           {!editing && onSave && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={handleEdit}
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+              <Pencil className="size-3" />
               Edit
-            </button>
+            </Button>
           )}
           {editing && (
             <>
               {hasChanges && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={handleRevert}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                  className="text-amber-700 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/30"
                 >
+                  <RotateCcw className="size-3" />
                   Revert
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
+              <Button
+                variant="default"
+                size="xs"
                 onClick={handleSave}
-                className="inline-flex items-center gap-1.5 rounded-md bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
               >
+                <Save className="size-3" />
                 Save
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={handleCancel}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
               >
+                <X className="size-3" />
                 Cancel
-              </button>
+              </Button>
             </>
           )}
           {!editing && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               {copied ? (
                 <>
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Check className="size-3" />
                   Copied
                 </>
               ) : (
                 <>
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
+                  <Copy className="size-3" />
                   Copy
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+      </CardHeader>
 
       {/* Errors */}
       {(parseError || validationErrors.length > 0) && (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-2 dark:border-red-800 dark:bg-red-900/20">
+        <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2">
           {parseError && (
-            <p className="text-xs font-medium text-red-700 dark:text-red-400">
+            <p className="text-xs font-medium text-destructive">
               JSON Error: {parseError}
             </p>
           )}
           {validationErrors.length > 0 && (
             <div className="space-y-0.5">
-              <p className="text-xs font-medium text-red-700 dark:text-red-400">
+              <p className="text-xs font-medium text-destructive">
                 Schema validation errors:
               </p>
               {validationErrors.map((err, i) => (
-                <p key={i} className="pl-2 text-xs text-red-600 dark:text-red-400">
+                <p key={i} className="pl-2 text-xs text-destructive/80">
                   {err}
                 </p>
               ))}
@@ -212,62 +214,64 @@ export default function JsonViewer({ data, title, objectType, onSave }: JsonView
       )}
 
       {/* Content */}
-      {editing ? (
-        <div className="overflow-x-auto bg-white dark:bg-gray-900">
-          <div className="flex">
-            <div
-              aria-hidden="true"
-              className="shrink-0 select-none border-r border-gray-200 bg-gray-50 px-3 py-3 text-right font-mono text-xs leading-5 text-gray-400 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-600"
-            >
-              {editValue.split('\n').map((_, i) => (
-                <div key={i}>{i + 1}</div>
-              ))}
+      <CardContent className="p-0">
+        {editing ? (
+          <div className="overflow-x-auto bg-background">
+            <div className="flex">
+              <div
+                aria-hidden="true"
+                className="shrink-0 select-none border-r border-border bg-muted/40 px-3 py-3 text-right font-mono text-xs leading-5 text-muted-foreground/60"
+              >
+                {editValue.split('\n').map((_, i) => (
+                  <div key={i}>{i + 1}</div>
+                ))}
+              </div>
+              <textarea
+                value={editValue}
+                onChange={(e) => {
+                  setEditValue(e.target.value);
+                  setParseError(null);
+                  setValidationErrors([]);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const ta = e.currentTarget;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+                    const updated = editValue.substring(0, start) + '  ' + editValue.substring(end);
+                    setEditValue(updated);
+                    requestAnimationFrame(() => {
+                      ta.selectionStart = ta.selectionEnd = start + 2;
+                    });
+                  }
+                }}
+                spellCheck={false}
+                className="flex-1 resize-y border-0 bg-transparent p-3 font-mono text-xs leading-5 text-foreground focus:outline-none focus:ring-0"
+                style={{ minHeight: `${Math.max(editValue.split('\n').length, 10) * 20 + 24}px` }}
+              />
             </div>
-            <textarea
-              value={editValue}
-              onChange={(e) => {
-                setEditValue(e.target.value);
-                setParseError(null);
-                setValidationErrors([]);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Tab') {
-                  e.preventDefault();
-                  const ta = e.currentTarget;
-                  const start = ta.selectionStart;
-                  const end = ta.selectionEnd;
-                  const updated = editValue.substring(0, start) + '  ' + editValue.substring(end);
-                  setEditValue(updated);
-                  requestAnimationFrame(() => {
-                    ta.selectionStart = ta.selectionEnd = start + 2;
-                  });
-                }
-              }}
-              spellCheck={false}
-              className="flex-1 resize-y border-0 bg-transparent p-3 font-mono text-xs leading-5 text-gray-800 focus:outline-none focus:ring-0 dark:text-gray-200"
-              style={{ minHeight: `${Math.max(editValue.split('\n').length, 10) * 20 + 24}px` }}
-            />
           </div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto bg-white dark:bg-gray-900">
-          <div className="flex">
-            <div
-              aria-hidden="true"
-              className="shrink-0 select-none border-r border-gray-200 bg-gray-50 px-3 py-3 text-right font-mono text-xs leading-5 text-gray-400 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-600"
-            >
-              {lines.map((_, i) => (
-                <div key={i}>{i + 1}</div>
-              ))}
+        ) : (
+          <div className="overflow-x-auto bg-background">
+            <div className="flex">
+              <div
+                aria-hidden="true"
+                className="shrink-0 select-none border-r border-border bg-muted/40 px-3 py-3 text-right font-mono text-xs leading-5 text-muted-foreground/60"
+              >
+                {lines.map((_, i) => (
+                  <div key={i}>{i + 1}</div>
+                ))}
+              </div>
+              <pre
+                ref={preRef}
+                className="flex-1 overflow-x-auto p-3 font-mono text-xs leading-5 text-foreground"
+                dangerouslySetInnerHTML={{ __html: highlighted }}
+              />
             </div>
-            <pre
-              ref={preRef}
-              className="flex-1 overflow-x-auto p-3 font-mono text-xs leading-5 text-gray-800 dark:text-gray-200"
-              dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
