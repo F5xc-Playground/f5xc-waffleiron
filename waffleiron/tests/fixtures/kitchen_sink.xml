@@ -1,0 +1,772 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    kitchen_sink.xml — Exercises every WaffleIron capability in a single policy.
+
+    Produces all four XC output objects (app_firewall, waf_exclusion_policy,
+    service_policy, http_lb_patch) and triggers every analysis flag: alarm-only
+    signatures, alarm-only violations, positive security counts, untranslatable
+    features, bot gaps, blocking page gaps, IP intel gaps, limit warnings
+    (exclusion count), CSRF, Data Guard, and conversion summary categories.
+-->
+<policy>
+    <fullPath>/Common/kitchen-sink</fullPath>
+    <enforcementMode>blocking</enforcementMode>
+    <encoding>utf-8</encoding>
+
+    <!-- ================================================================== -->
+    <!-- Signature settings: accuracy, staging, threat campaigns            -->
+    <!-- ================================================================== -->
+    <signatureSettings>
+        <signatureStaging>true</signatureStaging>
+        <stagingPeriod>14</stagingPeriod>
+        <placeholderSignaturesSettings>
+            <placeholderSignatureSetting>
+                <accuracyFilter>eq</accuracyFilter>
+                <accuracyValue>high</accuracyValue>
+            </placeholderSignatureSetting>
+        </placeholderSignaturesSettings>
+        <threatCampaigns>true</threatCampaigns>
+    </signatureSettings>
+
+    <!-- ================================================================== -->
+    <!-- Global signature overrides                                         -->
+    <!--   - 200001001–200001005: alarm-only  (decisions_required)          -->
+    <!--   - 200002001–200002005: disabled    (exclusion rules)             -->
+    <!--   - 200003001–200003003: enforced    (directly translated)         -->
+    <!-- ================================================================== -->
+    <signatures>
+        <!-- Alarm-only: enabled + alarm + NOT block -->
+        <signature>
+            <signatureId>200001001</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200001002</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200001003</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200001004</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200001005</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>false</block>
+        </signature>
+
+        <!-- Disabled: creates exclusion rules -->
+        <signature>
+            <signatureId>200002001</signatureId>
+            <enabled>false</enabled>
+            <alarm>false</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200002002</signatureId>
+            <enabled>false</enabled>
+            <alarm>false</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200002003</signatureId>
+            <enabled>false</enabled>
+            <alarm>false</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200002004</signatureId>
+            <enabled>false</enabled>
+            <alarm>false</alarm>
+            <block>false</block>
+        </signature>
+        <signature>
+            <signatureId>200002005</signatureId>
+            <enabled>false</enabled>
+            <alarm>false</alarm>
+            <block>false</block>
+        </signature>
+
+        <!-- Enforced: directly translated -->
+        <signature>
+            <signatureId>200003001</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>true</block>
+        </signature>
+        <signature>
+            <signatureId>200003002</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>true</block>
+        </signature>
+        <signature>
+            <signatureId>200003003</signatureId>
+            <enabled>true</enabled>
+            <alarm>true</alarm>
+            <block>true</block>
+        </signature>
+    </signatures>
+
+    <!-- ================================================================== -->
+    <!-- Signature sets: some enabled, some disabled                        -->
+    <!-- Disabled sets → disabled_attack_types in app_firewall              -->
+    <!-- ================================================================== -->
+    <signature-sets>
+        <signature-set>
+            <name>SQL Injection Signatures</name>
+            <enabled>true</enabled>
+        </signature-set>
+        <signature-set>
+            <name>Cross-Site Scripting Signatures</name>
+            <enabled>true</enabled>
+        </signature-set>
+        <signature-set>
+            <name>OS Command Injection Signatures</name>
+            <enabled>true</enabled>
+        </signature-set>
+        <signature-set>
+            <name>Buffer Overflow Signatures</name>
+            <enabled>false</enabled>
+        </signature-set>
+        <signature-set>
+            <name>Trojan/Backdoor/Spyware Signatures</name>
+            <enabled>false</enabled>
+        </signature-set>
+    </signature-sets>
+
+    <!-- ================================================================== -->
+    <!-- Violations                                                         -->
+    <!--   - Enforced (block=true): standard translation                    -->
+    <!--   - Alarm-only (alarm=true, block=false): decisions_required       -->
+    <!--   - Disabled (alarm=false, block=false): disabled_violation_types  -->
+    <!--   - VIOL_EVASION: fans out to 8 XC sub-types                      -->
+    <!--   - VIOL_HTTP_PROTOCOL: fans out to 10 XC sub-types               -->
+    <!--   - VIOL_FILETYPE/VIOL_METHOD: gates positive security deny rules  -->
+    <!-- ================================================================== -->
+    <violations>
+        <!-- Enforced violations -->
+        <violation>
+            <name>VIOL_ATTACK_SIGNATURE</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_EVASION</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_HTTP_PROTOCOL</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_FILETYPE</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_METHOD</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_REQUEST_MAX_LENGTH</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_DATA_GUARD</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+        <violation>
+            <name>VIOL_FILE_UPLOAD</name>
+            <alarm>true</alarm>
+            <block>true</block>
+        </violation>
+
+        <!-- Alarm-only violations (decisions required) -->
+        <violation>
+            <name>VIOL_COOKIE_MODIFIED</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_ENCODING</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_JSON_FORMAT</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_MANDATORY_HEADER</name>
+            <alarm>true</alarm>
+            <block>false</block>
+        </violation>
+
+        <!-- Disabled violations -->
+        <violation>
+            <name>VIOL_XML_FORMAT</name>
+            <alarm>false</alarm>
+            <block>false</block>
+        </violation>
+        <violation>
+            <name>VIOL_ASM_COOKIE_MODIFIED</name>
+            <alarm>false</alarm>
+            <block>false</block>
+        </violation>
+    </violations>
+
+    <!-- ================================================================== -->
+    <!-- URLs — exercises:                                                  -->
+    <!--   - Explicit + wildcard types                                      -->
+    <!--   - attackSignaturesCheck=false (creates waf_exclusion skip rules)  -->
+    <!--   - Per-URL signature overrides                                    -->
+    <!--   - Method restrictions (positive security → service_policy DENY)  -->
+    <!--   - Wildcard catch-all (should be skipped for method deny rules)   -->
+    <!--   - Protocol, clickjacking, staging, metachars attributes          -->
+    <!-- ================================================================== -->
+    <urls>
+        <url>
+            <name>/api/v1/users</name>
+            <protocol>https</protocol>
+            <type>explicit</type>
+            <method>GET</method>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <metacharsOnUrlCheck>true</metacharsOnUrlCheck>
+            <clickjackingProtection>false</clickjackingProtection>
+            <performStaging>false</performStaging>
+        </url>
+        <url>
+            <name>/api/v1/orders</name>
+            <protocol>https</protocol>
+            <type>explicit</type>
+            <method>POST</method>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <metacharsOnUrlCheck>true</metacharsOnUrlCheck>
+            <clickjackingProtection>false</clickjackingProtection>
+            <performStaging>false</performStaging>
+        </url>
+        <!-- URL with attack signatures disabled → waf_exclusion skip rule -->
+        <url>
+            <name>/api/v1/legacy</name>
+            <type>explicit</type>
+            <attackSignaturesCheck>false</attackSignaturesCheck>
+        </url>
+        <!-- URL with per-entity signature overrides (disabled + alarm-only) -->
+        <url>
+            <name>/login</name>
+            <protocol>https</protocol>
+            <type>explicit</type>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <signatureOverrides>
+                <signatureOverride>
+                    <signatureId>200004001</signatureId>
+                    <enabled>false</enabled>
+                    <alarm>false</alarm>
+                    <block>false</block>
+                </signatureOverride>
+                <signatureOverride>
+                    <signatureId>200004002</signatureId>
+                    <enabled>true</enabled>
+                    <alarm>true</alarm>
+                    <block>false</block>
+                </signatureOverride>
+            </signatureOverrides>
+        </url>
+        <!-- Admin URL with method + clickjacking -->
+        <url>
+            <name>/admin/dashboard</name>
+            <protocol>https</protocol>
+            <type>explicit</type>
+            <method>GET</method>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <clickjackingProtection>true</clickjackingProtection>
+            <performStaging>false</performStaging>
+        </url>
+        <!-- Wildcard URL with attack signatures disabled -->
+        <url>
+            <name>/static/*</name>
+            <type>wildcard</type>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>false</attackSignaturesCheck>
+        </url>
+        <!-- Wildcard URL with signatures enabled -->
+        <url>
+            <name>/api/v2/*</name>
+            <type>wildcard</type>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </url>
+        <!-- Catch-all wildcard (should be skipped for method deny rules) -->
+        <url>
+            <name>*</name>
+            <type>wildcard</type>
+            <method>*</method>
+            <isAllowed>true</isAllowed>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </url>
+    </urls>
+
+    <!-- ================================================================== -->
+    <!-- Parameters — exercises:                                            -->
+    <!--   - Sensitive parameters → anonymization rules                     -->
+    <!--   - Value-type constraints (alpha, numeric, email, auto-detect)    -->
+    <!--   - attack_signatures_check=false                                  -->
+    <!--   - Per-parameter signature overrides                              -->
+    <!--   - Maximum length constraints                                     -->
+    <!-- ================================================================== -->
+    <parameters>
+        <parameter>
+            <name>first_name</name>
+            <type>explicit</type>
+            <valueType>alpha</valueType>
+            <level>global</level>
+            <sensitiveParameter>false</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <allowEmptyValue>false</allowEmptyValue>
+            <checkMaxValueLength>true</checkMaxValueLength>
+            <maximumLength>100</maximumLength>
+        </parameter>
+        <parameter>
+            <name>age</name>
+            <type>explicit</type>
+            <valueType>numeric</valueType>
+            <level>global</level>
+            <sensitiveParameter>false</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </parameter>
+        <parameter>
+            <name>email</name>
+            <type>explicit</type>
+            <valueType>email</valueType>
+            <level>global</level>
+            <sensitiveParameter>false</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </parameter>
+        <parameter>
+            <name>comment</name>
+            <type>explicit</type>
+            <valueType>user-input</valueType>
+            <level>global</level>
+            <sensitiveParameter>false</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </parameter>
+        <!-- Sensitive parameter → anonymization rule in app_firewall -->
+        <parameter>
+            <name>password</name>
+            <type>explicit</type>
+            <valueType>user-input</valueType>
+            <level>global</level>
+            <sensitiveParameter>true</sensitiveParameter>
+            <attackSignaturesCheck>false</attackSignaturesCheck>
+        </parameter>
+        <!-- Sensitive parameter → anonymization rule -->
+        <parameter>
+            <name>ssn_field</name>
+            <type>explicit</type>
+            <valueType>user-input</valueType>
+            <level>global</level>
+            <sensitiveParameter>true</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </parameter>
+        <!-- Sensitive parameter → anonymization rule -->
+        <parameter>
+            <name>credit_card</name>
+            <type>explicit</type>
+            <valueType>user-input</valueType>
+            <level>global</level>
+            <sensitiveParameter>true</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </parameter>
+        <!-- Parameter with signature overrides -->
+        <parameter>
+            <name>search_query</name>
+            <type>explicit</type>
+            <valueType>auto-detect</valueType>
+            <level>global</level>
+            <sensitiveParameter>false</sensitiveParameter>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <signatureOverrides>
+                <signatureOverride>
+                    <signatureId>200005001</signatureId>
+                    <enabled>false</enabled>
+                    <alarm>false</alarm>
+                    <block>false</block>
+                </signatureOverride>
+            </signatureOverrides>
+        </parameter>
+    </parameters>
+
+    <!-- ================================================================== -->
+    <!-- File types — exercises:                                            -->
+    <!--   - Allowed types (positive security, counted)                     -->
+    <!--   - Disallowed types → service_policy DENY rules (positive sec)    -->
+    <!--   - Length constraints (parsed but not translated)                  -->
+    <!-- ================================================================== -->
+    <filetypes>
+        <filetype>
+            <name>html</name>
+            <allowed>true</allowed>
+            <responseCheck>false</responseCheck>
+            <queryStringLength>2048</queryStringLength>
+            <urlLength>4096</urlLength>
+            <postDataLength>65536</postDataLength>
+            <requestLength>131072</requestLength>
+        </filetype>
+        <filetype>
+            <name>json</name>
+            <allowed>true</allowed>
+            <responseCheck>false</responseCheck>
+            <queryStringLength>4096</queryStringLength>
+            <urlLength>8192</urlLength>
+            <postDataLength>1048576</postDataLength>
+            <requestLength>1048576</requestLength>
+        </filetype>
+        <filetype>
+            <name>pdf</name>
+            <allowed>true</allowed>
+            <responseCheck>false</responseCheck>
+        </filetype>
+        <filetype>
+            <name>jpg</name>
+            <allowed>true</allowed>
+            <responseCheck>false</responseCheck>
+        </filetype>
+        <!-- Disallowed file types → DENY rules in service_policy -->
+        <filetype>
+            <name>exe</name>
+            <allowed>false</allowed>
+            <responseCheck>false</responseCheck>
+        </filetype>
+        <filetype>
+            <name>bat</name>
+            <allowed>false</allowed>
+            <responseCheck>false</responseCheck>
+        </filetype>
+        <filetype>
+            <name>dll</name>
+            <allowed>false</allowed>
+            <responseCheck>false</responseCheck>
+        </filetype>
+    </filetypes>
+
+    <!-- ================================================================== -->
+    <!-- Cookies — exercises:                                               -->
+    <!--   - Explicit + wildcard types                                      -->
+    <!--   - Enforcement types                                              -->
+    <!--   - attackSignaturesCheck=false                                    -->
+    <!--   - Per-cookie signature overrides                                 -->
+    <!-- ================================================================== -->
+    <cookies>
+        <cookie>
+            <name>session_id</name>
+            <type>explicit</type>
+            <enforcementType>allow</enforcementType>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+        </cookie>
+        <cookie>
+            <name>tracking_prefs</name>
+            <type>wildcard</type>
+            <enforcementType>enforce</enforcementType>
+            <attackSignaturesCheck>false</attackSignaturesCheck>
+        </cookie>
+        <!-- Cookie with per-entity signature override -->
+        <cookie>
+            <name>auth_token</name>
+            <type>explicit</type>
+            <enforcementType>allow</enforcementType>
+            <attackSignaturesCheck>true</attackSignaturesCheck>
+            <signatureOverrides>
+                <signatureOverride>
+                    <signatureId>200006001</signatureId>
+                    <enabled>false</enabled>
+                    <alarm>false</alarm>
+                    <block>false</block>
+                </signatureOverride>
+            </signatureOverrides>
+        </cookie>
+    </cookies>
+
+    <!-- ================================================================== -->
+    <!-- Headers — exercises:                                               -->
+    <!--   - Mandatory headers (positive security, counted)                 -->
+    <!--   - Non-mandatory headers                                          -->
+    <!--   - Signature checking flag                                        -->
+    <!-- ================================================================== -->
+    <headers>
+        <header>
+            <name>X-Custom-Auth</name>
+            <type>explicit</type>
+            <mandatory>true</mandatory>
+            <checkSignatures>true</checkSignatures>
+        </header>
+        <header>
+            <name>X-Correlation-ID</name>
+            <type>explicit</type>
+            <mandatory>true</mandatory>
+            <checkSignatures>true</checkSignatures>
+        </header>
+        <header>
+            <name>X-Debug</name>
+            <type>explicit</type>
+            <mandatory>false</mandatory>
+            <checkSignatures>false</checkSignatures>
+        </header>
+    </headers>
+
+    <!-- ================================================================== -->
+    <!-- Methods — parsed and counted                                       -->
+    <!-- ================================================================== -->
+    <methods>
+        <method>
+            <name>GET</name>
+        </method>
+        <method>
+            <name>POST</name>
+        </method>
+        <method>
+            <name>PUT</name>
+        </method>
+        <method>
+            <name>DELETE</name>
+        </method>
+        <method>
+            <name>PATCH</name>
+            <actAsMethod>POST</actAsMethod>
+        </method>
+    </methods>
+
+    <!-- ================================================================== -->
+    <!-- IP whitelist → service_policy ALLOW rules                          -->
+    <!-- ================================================================== -->
+    <whitelist-ips>
+        <ip>
+            <ipAddress>10.0.0.0</ipAddress>
+            <ipMask>255.0.0.0</ipMask>
+            <blockRequests>never</blockRequests>
+            <neverLog>false</neverLog>
+            <trustedByBuilder>true</trustedByBuilder>
+            <ignoreAnomalies>true</ignoreAnomalies>
+            <ignoreIpReputation>true</ignoreIpReputation>
+        </ip>
+        <ip>
+            <ipAddress>172.16.0.0</ipAddress>
+            <ipMask>255.240.0.0</ipMask>
+            <blockRequests>never</blockRequests>
+        </ip>
+        <ip>
+            <ipAddress>192.168.1.0</ipAddress>
+            <ipMask>255.255.255.0</ipMask>
+            <blockRequests>never</blockRequests>
+        </ip>
+    </whitelist-ips>
+
+    <!-- ================================================================== -->
+    <!-- Geolocation blocking → service_policy geo DENY rule                -->
+    <!-- ================================================================== -->
+    <geolocation-enforcement>
+        <disallowed-geolocations>
+            <geolocation>
+                <country>North Korea</country>
+            </geolocation>
+            <geolocation>
+                <country>Iran</country>
+            </geolocation>
+            <geolocation>
+                <country>Cuba</country>
+            </geolocation>
+            <geolocation>
+                <country>Syria</country>
+            </geolocation>
+        </disallowed-geolocations>
+    </geolocation-enforcement>
+
+    <!-- ================================================================== -->
+    <!-- IP intelligence → service_policy threat DENY rules + gaps          -->
+    <!--   - Mapped categories (botnets, scanners, etc.) → translated      -->
+    <!--   - Unmapped category (cloud_providers) → IpIntelGap               -->
+    <!-- ================================================================== -->
+    <ip-intelligence>
+        <categories>
+            <category>
+                <name>botnets</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>scanners</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>phishing</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>tor-proxy</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>denial-of-service</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>windows-exploits</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>spam-sources</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>infected-sources</name>
+                <action>block</action>
+            </category>
+            <!-- Unmapped categories → IpIntelGap in analysis -->
+            <category>
+                <name>cloud_providers</name>
+                <action>report</action>
+            </category>
+            <category>
+                <name>anonymous_proxies</name>
+                <action>block</action>
+            </category>
+        </categories>
+    </ip-intelligence>
+
+    <!-- ================================================================== -->
+    <!-- Bot defense — exercises:                                           -->
+    <!--   - Translatable actions (block, report) → bot_protection_setting  -->
+    <!--   - Untranslatable actions (challenge, captcha) → BotGap           -->
+    <!-- ================================================================== -->
+    <bot-defense>
+        <enabled>true</enabled>
+        <mode>always</mode>
+        <categories>
+            <category>
+                <name>malicious-bot</name>
+                <action>block</action>
+            </category>
+            <category>
+                <name>benign-bot</name>
+                <action>report</action>
+            </category>
+            <category>
+                <name>unknown-bot</name>
+                <action>captcha</action>
+            </category>
+        </categories>
+    </bot-defense>
+
+    <!-- ================================================================== -->
+    <!-- Blocking page — exercises:                                         -->
+    <!--   - Custom HTML with supported variable (<%TS.request.ID()%>)      -->
+    <!--   - Unsupported variables → BlockingPageGap                        -->
+    <!--   - Response code mapping (403 → Forbidden)                        -->
+    <!-- ================================================================== -->
+    <blocking-page>
+        <enabled>true</enabled>
+        <responseCode>403</responseCode>
+        <customHtml><![CDATA[<html>
+<head><title>Access Denied</title></head>
+<body>
+    <h1>Request Blocked</h1>
+    <p>Your request has been blocked by our security policy.</p>
+    <p>Support ID: <%TS.request.ID()%></p>
+    <p>Timestamp: <%TS.request.time()%></p>
+    <p>Client IP: <%TS.request.client_ip()%></p>
+    <p>Policy: <%TS.request.policy_name()%></p>
+</body>
+</html>]]></customHtml>
+    </blocking-page>
+
+    <!-- ================================================================== -->
+    <!-- CSRF → http_lb_patch output                                        -->
+    <!-- ================================================================== -->
+    <csrf>
+        <enabled>true</enabled>
+    </csrf>
+
+    <!-- ================================================================== -->
+    <!-- Data Guard → anonymization + http_lb_patch output                  -->
+    <!-- ================================================================== -->
+    <data-guard>
+        <enabled>true</enabled>
+        <creditCards>true</creditCards>
+        <ssn>true</ssn>
+    </data-guard>
+
+    <!-- ================================================================== -->
+    <!-- Session tracking → untranslatable (translated_with_loss)           -->
+    <!-- ================================================================== -->
+    <session-tracking>
+        <enabled>true</enabled>
+        <hijackingPrevention>true</hijackingPrevention>
+    </session-tracking>
+
+    <!-- ================================================================== -->
+    <!-- Brute force → untranslatable (translated_with_loss)                -->
+    <!-- ================================================================== -->
+    <brute-force>
+        <enabled>true</enabled>
+        <detectionPeriod>600</detectionPeriod>
+        <maxAttempts>5</maxAttempts>
+        <loginUrl>/login</loginUrl>
+    </brute-force>
+
+    <!-- ================================================================== -->
+    <!-- Custom signatures → untranslatable (cannot_translate)              -->
+    <!-- ================================================================== -->
+    <custom-signatures>
+        <custom-signature>
+            <id>5001</id>
+            <name>Custom SQL Union Injection</name>
+            <pattern><![CDATA[(?i)\b(?:union\s+all\s+select|drop\s+table)\b]]></pattern>
+            <scope>url</scope>
+        </custom-signature>
+        <custom-signature>
+            <id>5002</id>
+            <name>Custom XSS Script Detection</name>
+            <pattern><![CDATA[<script[^>]*>.*?</script>]]></pattern>
+            <scope>parameter</scope>
+        </custom-signature>
+        <custom-signature>
+            <id>5003</id>
+            <name>Custom Log4j Pattern</name>
+            <pattern><![CDATA[\$\{jndi:(ldap|rmi|dns)://]]></pattern>
+            <scope>global</scope>
+        </custom-signature>
+    </custom-signatures>
+
+    <!-- ================================================================== -->
+    <!-- Allowed response codes                                             -->
+    <!-- ================================================================== -->
+    <allowed-response-codes>
+        <code>200</code>
+        <code>201</code>
+        <code>301</code>
+        <code>302</code>
+        <code>400</code>
+        <code>404</code>
+    </allowed-response-codes>
+
+</policy>
