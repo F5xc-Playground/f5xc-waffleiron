@@ -120,6 +120,8 @@ def _parse_accuracy_level(root: etree._Element) -> AccuracyLevel:
     for setting in settings:
         acc_filter = (setting.findtext("accuracyFilter") or "").strip()
         acc_value = (setting.findtext("accuracyValue") or "").strip()
+        if acc_filter == "ge" and acc_value == "low":
+            return AccuracyLevel.ALL
         if acc_filter == "ge" and acc_value == "medium":
             return AccuracyLevel.HIGH_MEDIUM
         if acc_filter == "eq" and acc_value == "high":

@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from waffleiron.parsers.xml_parser import XmlPolicyParser
+from lxml import etree
+
+from waffleiron.parsers.xml_parser import XmlPolicyParser, _parse_accuracy_level
 from waffleiron.model import EnforcementMode, AccuracyLevel
 
 
@@ -269,3 +271,31 @@ class TestPositiveSecurityPolicy:
         policy = XmlPolicyParser.parse(fixtures_path / "positive_security.xml")
         mandatory = [h for h in policy.entities.headers if h.mandatory]
         assert len(mandatory) == 1
+
+
+def _accuracy_xml(acc_filter: str, acc_value: str) -> etree._Element:
+    return etree.fromstring(f"""<policy>
+        <signatureSettings>
+            <placeholderSignaturesSettings>
+                <placeholderSignatureSetting>
+                    <accuracyFilter>{acc_filter}</accuracyFilter>
+                    <accuracyValue>{acc_value}</accuracyValue>
+                </placeholderSignatureSetting>
+            </placeholderSignaturesSettings>
+        </signatureSettings>
+    </policy>""")
+
+
+class TestAccuracyLevelParsing:
+    def test_ge_low_returns_all(self):
+        assert _parse_accuracy_level(_accuracy_xml("ge", "low")) == AccuracyLevel.ALL
+
+    def test_ge_medium_returns_high_medium(self):
+        assert _parse_accuracy_level(_accuracy_xml("ge", "medium")) == AccuracyLevel.HIGH_MEDIUM
+
+    def test_eq_high_returns_high(self):
+        assert _parse_accuracy_level(_accuracy_xml("eq", "high")) == AccuracyLevel.HIGH
+
+    def test_missing_defaults_to_high_medium(self):
+        root = etree.fromstring("<policy></policy>")
+        assert _parse_accuracy_level(root) == AccuracyLevel.HIGH_MEDIUM

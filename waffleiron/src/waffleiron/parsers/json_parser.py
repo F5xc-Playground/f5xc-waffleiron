@@ -135,6 +135,8 @@ def _parse_accuracy_level(policy: dict) -> AccuracyLevel:
         for setting in placeholder_settings:
             acc_filter = _str(setting, "accuracyFilter")
             acc_value = _str(setting, "accuracyValue")
+            if acc_filter == "ge" and acc_value == "low":
+                return AccuracyLevel.ALL
             if acc_filter == "ge" and acc_value == "medium":
                 return AccuracyLevel.HIGH_MEDIUM
             if acc_filter == "eq" and acc_value == "high":
@@ -142,6 +144,8 @@ def _parse_accuracy_level(policy: dict) -> AccuracyLevel:
     elif isinstance(placeholder_settings, dict):
         acc_filter = _str(placeholder_settings, "accuracyFilter")
         acc_value = _str(placeholder_settings, "accuracyValue")
+        if acc_filter == "ge" and acc_value == "low":
+            return AccuracyLevel.ALL
         if acc_filter == "ge" and acc_value == "medium":
             return AccuracyLevel.HIGH_MEDIUM
         if acc_filter == "eq" and acc_value == "high":

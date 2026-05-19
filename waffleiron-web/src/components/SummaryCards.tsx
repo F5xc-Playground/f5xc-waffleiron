@@ -145,7 +145,7 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
                   <SelectContent>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="high_medium">High + Medium</SelectItem>
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="all">High + Medium + Low</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
