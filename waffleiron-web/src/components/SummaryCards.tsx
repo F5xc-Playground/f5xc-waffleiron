@@ -1,5 +1,7 @@
+import { Label as RechartLabel, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
 import type { ConversionSummary, PolicyInfo, PolicyOverrides, BotGap, BlockingPageGap, IpIntelGap, UntranslatableSummary, LimitWarning } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
@@ -57,6 +59,53 @@ function classifyProtections(
   return { full, partial, none };
 }
 
+const coverageChartConfig: ChartConfig = {
+  coverage: { label: 'Coverage' },
+};
+
+function CoverageRadial({ pct, translated, total }: { pct: number; translated: number; total: number }) {
+  const fillColor = pct >= 80 ? 'hsl(var(--chart-2))' : pct >= 50 ? 'hsl(43 74% 66%)' : 'hsl(var(--destructive))';
+  const endAngle = 90 - (pct / 100) * 360;
+
+  return (
+    <ChartContainer config={coverageChartConfig} className="mx-auto aspect-square h-[160px] w-[160px]">
+      <RadialBarChart
+        data={[{ name: 'coverage', value: 1, fill: fillColor }]}
+        startAngle={90}
+        endAngle={endAngle}
+        innerRadius={58}
+        outerRadius={78}
+        barSize={16}
+      >
+        <PolarGrid
+          gridType="circle"
+          radialLines={false}
+          stroke="none"
+          className="first:fill-muted last:fill-background"
+          polarRadius={[62, 54]}
+        />
+        <RadialBar dataKey="value" cornerRadius={6} />
+        <RechartLabel
+          content={({ viewBox }) => {
+            if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+              return (
+                <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                  <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) - 6} className="fill-foreground text-3xl font-bold">
+                    {pct}%
+                  </tspan>
+                  <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 14} className="fill-muted-foreground text-xs">
+                    {translated}/{total} items
+                  </tspan>
+                </text>
+              );
+            }
+          }}
+        />
+      </RadialBarChart>
+    </ChartContainer>
+  );
+}
+
 export default function SummaryCards({ summary, policyInfo, overrides, onOverridesChange, botGaps, blockingPageGaps, ipIntelGaps, untranslatable, warnings }: SummaryCardsProps) {
   const prot = classifyProtections(policyInfo.features, botGaps, blockingPageGaps, ipIntelGaps);
   const translated = summary.directly_translated + summary.decisions_required;
@@ -85,15 +134,8 @@ export default function SummaryCards({ summary, policyInfo, overrides, onOverrid
 
   return (
     <div className="space-y-4">
-      {/* 1. Hero */}
-      <Card>
-        <CardContent className="flex items-center justify-center gap-3 py-4">
-          <span className="text-4xl font-bold text-primary">{pct}%</span>
-          <span className="text-sm text-muted-foreground">
-            translation coverage ({translated}/{summary.total} items)
-          </span>
-        </CardContent>
-      </Card>
+      {/* 1. Hero — radial coverage chart */}
+      <CoverageRadial pct={pct} translated={translated} total={summary.total} />
 
       {/* 2. Policy Overview (merged Source + Translated) */}
       <Card>
