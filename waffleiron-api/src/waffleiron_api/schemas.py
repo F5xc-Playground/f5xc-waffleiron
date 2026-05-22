@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 
 class ConversionResponse(BaseModel):
-    """Returned after uploading / parsing an ASM policy."""
+    """Returned after uploading / parsing an AWAF policy."""
 
     id: str
     status: str
@@ -17,7 +17,7 @@ class ConversionResponse(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
-    """Returned after analyzing a parsed ASM policy."""
+    """Returned after analyzing a parsed AWAF policy."""
 
     id: str
     status: str

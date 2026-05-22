@@ -489,7 +489,7 @@ export default function GapReport({ sessionId }: GapReportProps) {
                     <TableHeader>
                       <TableRow className="bg-muted dark:bg-white/10">
                         <TableHead className="text-xs uppercase tracking-wider">Category</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider">ASM Action</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider">AWAF Action</TableHead>
                         <TableHead className="text-xs uppercase tracking-wider">Reason</TableHead>
                       </TableRow>
                     </TableHeader>

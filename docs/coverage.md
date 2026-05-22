@@ -51,7 +51,7 @@ Each section covers a category of AWAF policy features. Features are classified 
 
 **Mapped signature sets (30):**
 
-| ASM Signature Set | XC Attack Type |
+| AWAF Signature Set | XC Attack Type |
 |---|---|
 | SQL Injection Signatures | ATTACK_TYPE_SQL_INJECTION |
 | Cross Site Scripting Signatures | ATTACK_TYPE_CROSS_SITE_SCRIPTING |
@@ -110,7 +110,7 @@ Each section covers a category of AWAF policy features. Features are classified 
 
 **Mapped violations:**
 
-| ASM Violation | XC Violation(s) |
+| AWAF Violation | XC Violation(s) |
 |---|---|
 | VIOL_FILETYPE | VIOL_FILETYPE |
 | VIOL_METHOD | VIOL_METHOD |
@@ -184,7 +184,7 @@ These features have no XC equivalent. They appear in the gap report.
 
 **Mapped IP intelligence categories (14):**
 
-| ASM Category | XC IPThreatCategory |
+| AWAF Category | XC IPThreatCategory |
 |---|---|
 | botnets | BOTNETS |
 | scanners | SCANNERS |

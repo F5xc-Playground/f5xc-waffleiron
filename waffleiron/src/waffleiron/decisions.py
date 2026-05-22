@@ -1,4 +1,4 @@
-"""Decisions model — how users express alarm-only choices during ASM-to-XC conversion.
+"""Decisions model — how users express alarm-only choices during AWAF-to-XC conversion.
 
 This module defines the enums and dataclasses that capture user decisions about
 alarm-only signatures, violations, and bot categories.  A ``DecisionSet`` can be

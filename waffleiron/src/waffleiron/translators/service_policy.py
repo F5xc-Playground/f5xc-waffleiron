@@ -12,7 +12,7 @@ import re
 
 from waffleiron.model import AsmPolicy, EnforcementMode
 from waffleiron.translators.mappings import ASM_IP_INTEL_TO_XC
-from waffleiron.translators.utils import sanitize_xc_name
+from waffleiron.translators.utils import sanitize_xc_name, build_metadata
 
 # ---------------------------------------------------------------------------
 # Country name → ISO 3166-1 alpha-2 code mapping
@@ -392,10 +392,12 @@ class ServicePolicyTranslator:
         policy_name = base + suffix
 
         return {
-            "metadata": {
-                "name": policy_name,
-                "namespace": namespace,
-            },
+            "metadata": build_metadata(
+                name=policy_name,
+                namespace=namespace,
+                source_policy=name_override or policy.name,
+                resource_type="service_policy",
+            ),
             "spec": {
                 "rule_list": {
                     "rules": rules,

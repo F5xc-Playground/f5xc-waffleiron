@@ -87,7 +87,7 @@ class UntranslatableSummary:
 
 @dataclass
 class BotGap:
-    """A bot category whose ASM action has no XC equivalent."""
+    """A bot category whose AWAF action has no XC equivalent."""
 
     category: str
     asm_action: str
@@ -281,7 +281,7 @@ def _build_positive_security_translated(policy: AsmPolicy) -> PositiveSecurityTr
 
 
 def _collect_bot_gaps(policy: AsmPolicy) -> list[BotGap]:
-    """Find bot categories whose ASM action cannot be mapped to XC."""
+    """Find bot categories whose AWAF action cannot be mapped to XC."""
     gaps: list[BotGap] = []
     for cat in policy.bot_defense.categories:
         if cat.action in _UNTRANSLATABLE_BOT_ACTIONS:
@@ -462,7 +462,7 @@ def _build_summary(
 
 
 def analyze(policy: AsmPolicy) -> AnalysisResult:
-    """Analyze an ASM policy and return structured gap/limit/decision data."""
+    """Analyze an AWAF policy and return structured gap/limit/decision data."""
     alarm_sigs = _collect_alarm_only_signatures(policy)
     alarm_viols = _collect_alarm_only_violations(policy)
     pos_sec = _build_positive_security(policy)

@@ -496,6 +496,18 @@ class TestMetadata:
         skip_rule = next(r for r in rules if "waf_skip_processing" in r)
         assert "app_firewall_detection_control" not in skip_rule
 
+    def test_metadata_has_all_xc_fields(self):
+        from waffleiron.decisions import DecisionSet
+        policy = make_policy_with_disabled_sig(200001001)
+        result = ExclusionPolicyTranslator.translate(
+            policy, DecisionSet(), namespace="my-ns"
+        )
+        md = result["metadata"]
+        assert md["annotations"] == {}
+        assert md["labels"] == {"ves.io/app_type": "waffleiron"}
+        assert md["disable"] is False
+        assert "WaffleIron" in md["description"]
+
 
 # ---------------------------------------------------------------------------
 # TestCoalescing

@@ -59,7 +59,7 @@ export default function TranslatedWithLossPanel({ untranslatable, warnings }: Tr
                 </AlertTitle>
                 <AlertDescription>
                   <p className="text-sm text-foreground">
-                    <span className="font-semibold text-yellow-600 dark:text-yellow-400">ASM:</span> {item.asmDescription}
+                    <span className="font-semibold text-yellow-600 dark:text-yellow-400">AWAF:</span> {item.asmDescription}
                   </p>
                   <p className="mt-0.5 text-sm text-foreground">
                     <span className="font-semibold text-yellow-600 dark:text-yellow-400">XC:</span> {item.xcAlternative}

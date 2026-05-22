@@ -17,18 +17,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { TranslationOutputs } from '../types';
 
 const OBJECT_TYPES = [
-  { key: 'app_firewall', label: 'App Firewall' },
-  { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
-  { key: 'service_policy', label: 'Service Policy' },
-  { key: 'http_lb_patch', label: 'HTTP LB Patch' },
+  { key: 'app-firewall', label: 'App Firewall' },
+  { key: 'waf-exclusion-policy', label: 'WAF Exclusion Policy' },
+  { key: 'service-policy', label: 'Service Policy' },
+  { key: '_advisory:http_lb_patch', label: 'HTTP LB Patch' },
 ] as const;
 
 type OutputKey = (typeof OBJECT_TYPES)[number]['key'];
 
 const NAMESPACE_OBJECTS = [
-  { key: 'app_firewall', label: 'App Firewall' },
-  { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
-  { key: 'service_policy', label: 'Service Policy' },
+  { key: 'app-firewall', label: 'App Firewall' },
+  { key: 'waf-exclusion-policy', label: 'WAF Exclusion Policy' },
+  { key: 'service-policy', label: 'Service Policy' },
 ] as const;
 
 function getAvailableTabs(outputs: TranslationOutputs) {
@@ -51,9 +51,9 @@ export default function ReviewView() {
   const [namespace, setNamespace] = useState('shared');
   const [advancedNs, setAdvancedNs] = useState(false);
   const [perObjectNs, setPerObjectNs] = useState<Record<string, string>>({
-    app_firewall: 'shared',
-    exclusion_policy: 'shared',
-    service_policy: 'shared',
+    'app-firewall': 'shared',
+    'waf-exclusion-policy': 'shared',
+    'service-policy': 'shared',
   });
 
   // Namespace loading from XC tenant
@@ -111,7 +111,14 @@ export default function ReviewView() {
     setTranslating(true);
 
     try {
-      const nsArg = advancedNs ? perObjectNs : namespace;
+      // Backend expects underscore keys for namespaces dict; remap from kebab-case UI keys.
+      const nsArg = advancedNs
+        ? {
+            app_firewall: perObjectNs['app-firewall'] ?? namespace,
+            exclusion_policy: perObjectNs['waf-exclusion-policy'] ?? namespace,
+            service_policy: perObjectNs['service-policy'] ?? namespace,
+          }
+        : namespace;
       const result = await runTranslation(sessionId, nsArg, policyName || undefined, state.overrides);
       dispatch({ type: 'TRANSLATION_COMPLETE', outputs: result });
     } catch (err) {
@@ -235,9 +242,9 @@ export default function ReviewView() {
                   setAdvancedNs(checked);
                   if (checked) {
                     setPerObjectNs({
-                      app_firewall: namespace,
-                      exclusion_policy: namespace,
-                      service_policy: namespace,
+                      'app-firewall': namespace,
+                      'waf-exclusion-policy': namespace,
+                      'service-policy': namespace,
                     });
                   }
                 }}
@@ -373,7 +380,7 @@ export default function ReviewView() {
 
                 {tabs.map((tab) => (
                   <TabsContent key={tab.key} value={tab.key}>
-                    {tab.key === 'http_lb_patch' && (
+                    {tab.key === '_advisory:http_lb_patch' && (
                       <div className="mb-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 dark:border-yellow-700/40 dark:bg-yellow-900/20">
                         <p className="text-sm text-foreground">
                           <span className="font-semibold">Not pushed to XC.</span> CSRF and Data Guard are configured at the HTTP Load Balancer level in XC, not on the WAF policy. Apply these settings manually to your HTTP LB after deployment. This snippet is included in the JSON download for reference.

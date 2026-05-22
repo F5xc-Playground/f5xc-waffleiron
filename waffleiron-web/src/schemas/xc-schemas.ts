@@ -9,7 +9,7 @@ const xcMetadata = {
 };
 
 export const appFirewallSchema = {
-  $id: 'app_firewall',
+  $id: 'app-firewall',
   type: 'object' as const,
   properties: {
     metadata: xcMetadata,
@@ -70,7 +70,7 @@ const exclusionRuleSchema = {
 };
 
 export const exclusionPolicySchema = {
-  $id: 'exclusion_policy',
+  $id: 'waf-exclusion-policy',
   type: 'object' as const,
   properties: {
     metadata: xcMetadata,
@@ -115,7 +115,7 @@ const servicePolicyRuleSchema = {
 };
 
 export const servicePolicySchema = {
-  $id: 'service_policy',
+  $id: 'service-policy',
   type: 'object' as const,
   properties: {
     metadata: xcMetadata,
@@ -142,7 +142,7 @@ export const servicePolicySchema = {
 };
 
 export const httpLbPatchSchema = {
-  $id: 'http_lb_patch',
+  $id: '_advisory:http_lb_patch',
   type: 'object' as const,
   properties: {
     csrf: {
@@ -169,8 +169,8 @@ export const httpLbPatchSchema = {
 };
 
 export const schemas: Record<string, object> = {
-  app_firewall: appFirewallSchema,
-  exclusion_policy: exclusionPolicySchema,
-  service_policy: servicePolicySchema,
-  http_lb_patch: httpLbPatchSchema,
+  'app-firewall': appFirewallSchema,
+  'waf-exclusion-policy': exclusionPolicySchema,
+  'service-policy': servicePolicySchema,
+  '_advisory:http_lb_patch': httpLbPatchSchema,
 };

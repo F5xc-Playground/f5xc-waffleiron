@@ -76,18 +76,25 @@ class TestTranslate:
         )
         assert response.status_code == 200
         data = response.json()
-        assert "app_firewall" in data["outputs"]
+        assert "app-firewall" in data["outputs"]
 
 
 class TestOutputs:
     def test_list_outputs(self, translated_session_id):
         response = client.get(f"/api/v1/conversions/{translated_session_id}/outputs")
         assert response.status_code == 200
-        assert "app_firewall" in response.json()["available"]
+        assert "app-firewall" in response.json()["available"]
 
     def test_download_output(self, translated_session_id):
         response = client.get(
             f"/api/v1/conversions/{translated_session_id}/outputs/app_firewall"
+        )
+        assert response.status_code == 200
+        assert "metadata" in response.json()
+
+    def test_download_output_kebab_case(self, translated_session_id):
+        response = client.get(
+            f"/api/v1/conversions/{translated_session_id}/outputs/app-firewall"
         )
         assert response.status_code == 200
         assert "metadata" in response.json()
@@ -108,7 +115,7 @@ class TestReport:
             headers={"Accept": "text/markdown"},
         )
         assert response.status_code == 200
-        assert "## Summary" in response.text or "# ASM" in response.text or "##" in response.text
+        assert "## Summary" in response.text or "# AWAF" in response.text or "##" in response.text
 
 
 class TestDelete:
