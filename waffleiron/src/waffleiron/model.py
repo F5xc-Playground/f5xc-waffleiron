@@ -16,7 +16,7 @@ from typing import Optional
 
 
 class EnforcementMode(Enum):
-    """ASM policy enforcement mode."""
+    """AWAF policy enforcement mode."""
 
     BLOCKING = "blocking"
     TRANSPARENT = "transparent"
@@ -103,7 +103,7 @@ class CustomSignature:
 
 @dataclass
 class UrlEntity:
-    """An ASM URL entity (explicit or wildcard)."""
+    """An AWAF URL entity (explicit or wildcard)."""
 
     name: str
     protocol: Optional[str] = None
@@ -119,7 +119,7 @@ class UrlEntity:
 
 @dataclass
 class ParameterEntity:
-    """An ASM parameter entity (explicit or wildcard, global or URL-scoped)."""
+    """An AWAF parameter entity (explicit or wildcard, global or URL-scoped)."""
 
     name: str
     type: Optional[str] = None
@@ -138,7 +138,7 @@ class ParameterEntity:
 
 @dataclass
 class FileTypeEntity:
-    """An ASM file type entity."""
+    """An AWAF file type entity."""
 
     name: str
     allowed: Optional[bool] = None
@@ -151,7 +151,7 @@ class FileTypeEntity:
 
 @dataclass
 class CookieEntity:
-    """An ASM cookie entity."""
+    """An AWAF cookie entity."""
 
     name: str
     type: Optional[str] = None
@@ -162,7 +162,7 @@ class CookieEntity:
 
 @dataclass
 class HeaderEntity:
-    """An ASM header entity."""
+    """An AWAF header entity."""
 
     name: str
     type: Optional[str] = None
@@ -172,7 +172,7 @@ class HeaderEntity:
 
 @dataclass
 class MethodEntity:
-    """An ASM allowed method entity."""
+    """An AWAF allowed method entity."""
 
     name: str
     act_as_method: Optional[str] = None
@@ -180,7 +180,7 @@ class MethodEntity:
 
 @dataclass
 class IpWhitelistEntry:
-    """An IP address/network in the ASM whitelist."""
+    """An IP address/network in the AWAF whitelist."""
 
     ip: str
     mask: str
@@ -198,7 +198,7 @@ class IpWhitelistEntry:
 
 @dataclass
 class SignatureConfig:
-    """Signature-related settings for the ASM policy."""
+    """Signature-related settings for the AWAF policy."""
 
     global_overrides: list[SignatureOverride]
     accuracy_level: AccuracyLevel
@@ -209,7 +209,7 @@ class SignatureConfig:
 
 @dataclass
 class EntityCollection:
-    """All entity types collected from the ASM policy."""
+    """All entity types collected from the AWAF policy."""
 
     urls: list[UrlEntity] = field(default_factory=list)
     parameters: list[ParameterEntity] = field(default_factory=list)
@@ -295,10 +295,10 @@ class BlockingPageConfig:
 
 @dataclass
 class AsmPolicy:
-    """Intermediate representation of a BIG-IP ASM/AWAF policy.
+    """Intermediate representation of a BIG-IP AWAF policy.
 
     This is the central data structure that parsers populate and translators consume.
-    Every field corresponds to an ASM policy concept; translators map these to F5 XC
+    Every field corresponds to an AWAF policy concept; translators map these to F5 XC
     WAF objects (app_firewall, waf_exclusion_policy, service_policy, etc.).
     """
 

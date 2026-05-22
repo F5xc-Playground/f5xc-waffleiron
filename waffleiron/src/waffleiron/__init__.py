@@ -1,4 +1,4 @@
-"""WaffleIron — ASM/AWAF to F5 XC WAF policy converter."""
+"""WaffleIron — AWAF to F5 XC WAF policy converter."""
 
 from waffleiron.analysis import analyze as analyze
 from waffleiron.decisions import DecisionSet as DecisionSet

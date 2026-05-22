@@ -1,4 +1,4 @@
-"""Shared ASM-to-XC mapping constants used by all translators."""
+"""Shared AWAF-to-XC mapping constants used by all translators."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ ASM_SIG_SET_TO_XC_ATTACK_TYPE: dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# ASM evasion violation  →  XC evasion sub-types
+# AWAF evasion violation  →  XC evasion sub-types
 # ---------------------------------------------------------------------------
 ASM_EVASION_XC_SUBTYPES: list[str] = [
     "VIOL_EVASION_DIRECTORY_TRAVERSALS",
@@ -44,7 +44,7 @@ ASM_EVASION_XC_SUBTYPES: list[str] = [
 ]
 
 # ---------------------------------------------------------------------------
-# ASM HTTP-protocol violation  →  XC HTTP-protocol sub-types
+# AWAF HTTP-protocol violation  →  XC HTTP-protocol sub-types
 # ---------------------------------------------------------------------------
 ASM_HTTP_PROTOCOL_XC_SUBTYPES: list[str] = [
     "VIOL_HTTP_PROTOCOL_MULTIPLE_HOST_HEADERS",
@@ -60,7 +60,7 @@ ASM_HTTP_PROTOCOL_XC_SUBTYPES: list[str] = [
 ]
 
 # ---------------------------------------------------------------------------
-# ASM violation name  →  list of XC violation equivalents
+# AWAF violation name  →  list of XC violation equivalents
 # ---------------------------------------------------------------------------
 ASM_VIOLATION_TO_XC_VIOLATIONS: dict[str, list[str]] = {
     "VIOL_FILETYPE": ["VIOL_FILETYPE"],
@@ -79,7 +79,7 @@ ASM_VIOLATION_TO_XC_VIOLATIONS: dict[str, list[str]] = {
 }
 
 # ---------------------------------------------------------------------------
-# ASM bot category  →  XC bot-defence action key
+# AWAF bot category  →  XC bot-defence action key
 # ---------------------------------------------------------------------------
 ASM_BOT_CATEGORY_TO_XC: dict[str, str] = {
     "malicious-bot": "malicious_bot_action",

@@ -1,10 +1,10 @@
-"""Auto-detect whether raw policy bytes are ASM XML or Declarative JSON."""
+"""Auto-detect whether raw policy bytes are AWAF XML or Declarative JSON."""
 
 import enum
 
 
 class PolicyFormat(enum.Enum):
-    """Supported ASM policy export formats."""
+    """Supported AWAF policy export formats."""
 
     XML = "xml"
     JSON = "json"

@@ -1,4 +1,4 @@
-"""ASM policy format parsers — XML and JSON."""
+"""AWAF policy format parsers — XML and JSON."""
 
 from pathlib import Path
 

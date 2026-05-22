@@ -1,1 +1,1 @@
-"""WaffleIron REST API — FastAPI service for ASM-to-XC policy conversion."""
+"""WaffleIron REST API — FastAPI service for AWAF-to-XC policy conversion."""
