@@ -1,4 +1,4 @@
-"""Translation orchestrator — wires all four ASM-to-XC translators."""
+"""Translation orchestrator — wires all four AWAF-to-XC translators."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from waffleiron.translators.app_firewall import AppFirewallTranslator
 from waffleiron.translators.exclusion_policy import ExclusionPolicyTranslator
 from waffleiron.translators.http_lb_patch import HttpLbPatchTranslator
 from waffleiron.translators.service_policy import ServicePolicyTranslator
+from waffleiron.translators.utils import XC_RESOURCE_TYPES
 
 
 @dataclass
@@ -21,6 +22,24 @@ class TranslationResult:
     exclusion_policy: Optional[dict]
     service_policy: Optional[dict]
     http_lb_patch: Optional[dict]
+
+    def output_files(self) -> dict[str, dict]:
+        """Return {relative_path: object_dict} for backup-tool-compatible output."""
+        files: dict[str, dict] = {}
+
+        for attr_name in ("app_firewall", "exclusion_policy", "service_policy"):
+            obj = getattr(self, attr_name)
+            if obj is None:
+                continue
+            kind_info = XC_RESOURCE_TYPES[attr_name]
+            name = obj["metadata"]["name"]
+            path = f"{kind_info['kind']}/{name}.json"
+            files[path] = obj
+
+        if self.http_lb_patch is not None:
+            files["_advisory/http_lb_patch.json"] = self.http_lb_patch
+
+        return files
 
 
 def translate(
