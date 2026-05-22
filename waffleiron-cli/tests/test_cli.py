@@ -15,7 +15,9 @@ class TestConvert:
             "--output", str(tmp_path / "output"),
         ])
         assert result.exit_code == 0, result.output
-        assert (tmp_path / "output" / "app_firewall.json").exists()
+        assert (tmp_path / "output" / "app-firewall").is_dir()
+        assert any((tmp_path / "output" / "app-firewall").glob("*.json"))
+        assert (tmp_path / "output" / "manifest.json").exists()
         assert (tmp_path / "output" / "gap_report.md").exists()
         assert (tmp_path / "output" / "decisions.yaml").exists()
 
@@ -97,7 +99,7 @@ class TestPush:
         ])
         assert result.exit_code == 0, result.output
         assert "would push" in result.output
-        assert "app_firewall.json" in result.output
+        assert "app-firewall/" in result.output
 
 
 class TestXcStatus:

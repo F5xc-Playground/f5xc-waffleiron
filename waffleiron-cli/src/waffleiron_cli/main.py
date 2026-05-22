@@ -31,7 +31,7 @@ from waffleiron.decisions import (
 
 app = typer.Typer(
     name="waffleiron",
-    help="Convert BIG-IP ASM/AWAF policies to F5 XC WAF configurations",
+    help="Convert BIG-IP AWAF policies to F5 XC WAF configurations",
 )
 console = Console()
 
@@ -64,7 +64,7 @@ def _check_file_exists(path: Path) -> None:
 
 @app.command()
 def convert(
-    policy_file: Path = typer.Argument(..., help="Path to ASM/AWAF policy file (XML or JSON)"),
+    policy_file: Path = typer.Argument(..., help="Path to AWAF policy file (XML or JSON)"),
     namespace: str = typer.Option(..., help="Target XC namespace"),
     output: Path = typer.Option(..., help="Output directory"),
     alarm_only_signatures: str = typer.Option(
@@ -75,7 +75,7 @@ def convert(
     ),
     decisions: Optional[Path] = typer.Option(None, help="Path to decisions YAML file"),
 ) -> None:
-    """Parse an ASM policy and produce XC WAF configuration files."""
+    """Parse an AWAF policy and produce XC WAF configuration files."""
     valid_sig_actions = {"exclude", "enforce", "defer"}
     valid_viol_actions = {"disable", "enforce", "defer"}
     if alarm_only_signatures not in valid_sig_actions:
@@ -109,18 +109,19 @@ def convert(
     # Translate
     result = translate(policy, decision_set, namespace)
 
-    # Write outputs
+    from waffleiron.manifest import build_manifest
+
+    # Write outputs in backup-tool-compatible layout
     output.mkdir(parents=True, exist_ok=True)
 
-    (output / "app_firewall.json").write_text(json.dumps(result.app_firewall, indent=2))
-    if result.exclusion_policy:
-        (output / "waf_exclusion_policy.json").write_text(
-            json.dumps(result.exclusion_policy, indent=2)
-        )
-    if result.service_policy:
-        (output / "service_policy.json").write_text(json.dumps(result.service_policy, indent=2))
-    if result.http_lb_patch:
-        (output / "http_lb_patch.json").write_text(json.dumps(result.http_lb_patch, indent=2))
+    for rel_path, obj in result.output_files().items():
+        file_path = output / rel_path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(json.dumps(obj, indent=2))
+
+    # Manifest
+    manifest = build_manifest(result=result, namespace=namespace, source_policy=policy.name)
+    (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
     # Gap report (Markdown)
     md_report = generate_report(
@@ -141,10 +142,10 @@ def convert(
 
 @app.command()
 def analyze(
-    policy_file: Path = typer.Argument(..., help="Path to ASM/AWAF policy file (XML or JSON)"),
+    policy_file: Path = typer.Argument(..., help="Path to AWAF policy file (XML or JSON)"),
     output: Path = typer.Option(..., help="Output directory"),
 ) -> None:
-    """Analyze an ASM policy and produce gap reports and a decisions template."""
+    """Analyze an AWAF policy and produce gap reports and a decisions template."""
     _check_file_exists(policy_file)
 
     policy = parse(policy_file)
@@ -176,10 +177,9 @@ def analyze(
 # validate
 # ---------------------------------------------------------------------------
 
-# Mapping of output filename to XC object type for validation
-_VALIDATE_MAP = {
-    "app_firewall.json": "app_firewall",
-    "waf_exclusion_policy.json": "waf_exclusion_policy",
+_VALIDATE_KIND_MAP: dict[str, str] = {
+    "app-firewall": "app_firewall",
+    "waf-exclusion-policy": "waf_exclusion_policy",
 }
 
 
@@ -195,34 +195,35 @@ def validate(
     all_valid = True
     checked = 0
 
-    for filename, object_type in _VALIDATE_MAP.items():
-        filepath = output_dir / filename
-        if not filepath.exists():
+    for kind_dir, object_type in _VALIDATE_KIND_MAP.items():
+        kind_path = output_dir / kind_dir
+        if not kind_path.is_dir():
             continue
+        for filepath in sorted(kind_path.glob("*.json")):
+            filename = f"{kind_dir}/{filepath.name}"
+            obj = json.loads(filepath.read_text())
+            result = validate_outputs(obj, object_type)
+            checked += 1
 
-        obj = json.loads(filepath.read_text())
-        result = validate_outputs(obj, object_type)
-        checked += 1
+            if result.errors:
+                all_valid = False
+                table = Table(title=f"Validation errors: {filename}")
+                table.add_column("Path")
+                table.add_column("Message")
+                for err in result.errors:
+                    table.add_row(err.path, err.message)
+                console.print(table)
 
-        if result.errors:
-            all_valid = False
-            table = Table(title=f"Validation errors: {filename}")
-            table.add_column("Path")
-            table.add_column("Message")
-            for err in result.errors:
-                table.add_row(err.path, err.message)
-            console.print(table)
+            if result.warnings:
+                table = Table(title=f"Validation warnings: {filename}")
+                table.add_column("Path")
+                table.add_column("Message")
+                for warn in result.warnings:
+                    table.add_row(warn.path, warn.message)
+                console.print(table)
 
-        if result.warnings:
-            table = Table(title=f"Validation warnings: {filename}")
-            table.add_column("Path")
-            table.add_column("Message")
-            for warn in result.warnings:
-                table.add_row(warn.path, warn.message)
-            console.print(table)
-
-        if result.is_valid:
-            console.print(f"[green]{filename}:[/green] valid")
+            if result.is_valid:
+                console.print(f"[green]{filename}:[/green] valid")
 
     if checked == 0:
         console.print("[yellow]No validatable JSON files found in the directory.[/yellow]")
@@ -261,10 +262,10 @@ def _resolve_push_config(
     return XCConfig.from_env()
 
 
-_PUSH_FILE_MAP: dict[str, str] = {
-    "app_firewall.json": "app_firewalls",
-    "waf_exclusion_policy.json": "waf_exclusion_policys",
-    "service_policy.json": "service_policys",
+_PUSH_KIND_MAP: dict[str, str] = {
+    "app-firewall": "app_firewalls",
+    "waf-exclusion-policy": "waf_exclusion_policys",
+    "service-policy": "service_policys",
 }
 
 
@@ -297,31 +298,32 @@ def push(
     client = XCClient(xc_config)
 
     pushed = 0
-    for filename, resource in _PUSH_FILE_MAP.items():
-        filepath = output_dir / filename
-        if not filepath.exists():
+    for kind_dir, resource in _PUSH_KIND_MAP.items():
+        kind_path = output_dir / kind_dir
+        if not kind_path.is_dir():
             continue
+        for filepath in sorted(kind_path.glob("*.json")):
+            obj = json.loads(filepath.read_text())
 
-        obj = json.loads(filepath.read_text())
+            # Namespace override
+            if namespace:
+                obj.setdefault("metadata", {})["namespace"] = namespace
 
-        # Namespace override
-        if namespace:
-            obj.setdefault("metadata", {})["namespace"] = namespace
+            obj_ns = obj.get("metadata", {}).get("namespace", "default")
+            obj_name = obj.get("metadata", {}).get("name", "unknown")
+            display_name = f"{kind_dir}/{filepath.name}"
 
-        obj_ns = obj.get("metadata", {}).get("namespace", "default")
-        obj_name = obj.get("metadata", {}).get("name", "unknown")
+            if dry_run:
+                console.print(f"  [dim]would push[/dim] {display_name} → {obj_ns}/{obj_name}")
+                pushed += 1
+                continue
 
-        if dry_run:
-            console.print(f"  [dim]would push[/dim] {filename} → {obj_ns}/{obj_name}")
-            pushed += 1
-            continue
-
-        try:
-            client.create_object(resource, obj_ns, obj)
-            console.print(f"  [green]✓[/green] {filename} → {obj_ns}/{obj_name}")
-            pushed += 1
-        except Exception as e:
-            console.print(f"  [red]✗[/red] {filename} → {obj_ns}/{obj_name}: {e}")
+            try:
+                client.create_object(resource, obj_ns, obj)
+                console.print(f"  [green]✓[/green] {display_name} → {obj_ns}/{obj_name}")
+                pushed += 1
+            except Exception as e:
+                console.print(f"  [red]✗[/red] {display_name} → {obj_ns}/{obj_name}: {e}")
 
     if pushed == 0:
         console.print("[yellow]No pushable JSON files found in the directory.[/yellow]")
