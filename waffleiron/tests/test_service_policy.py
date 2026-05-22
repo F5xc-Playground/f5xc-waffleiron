@@ -281,6 +281,14 @@ class TestServicePolicyMetadata:
         assert " " not in name
         assert "!" not in name
 
+    def test_metadata_has_all_xc_fields(self, mature_policy):
+        result = ServicePolicyTranslator.translate(mature_policy, namespace="my-ns")
+        md = result["metadata"]
+        assert md["annotations"] == {}
+        assert md["labels"] == {"ves.io/app_type": "waffleiron"}
+        assert md["disable"] is False
+        assert "WaffleIron" in md["description"]
+
 
 # ---------------------------------------------------------------------------
 # TestRuleOrdering

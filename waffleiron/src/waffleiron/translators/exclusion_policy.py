@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 from waffleiron.decisions import AlarmOnlyAction, DecisionSet
 from waffleiron.model import AsmPolicy
-from waffleiron.translators.utils import path_slug, sanitize_xc_name
+from waffleiron.translators.utils import path_slug, sanitize_xc_name, build_metadata
 
 _MAX_CONTEXTS_PER_RULE = 1024
 
@@ -118,10 +118,12 @@ class ExclusionPolicyTranslator:
         policy_name = base + suffix
 
         return {
-            "metadata": {
-                "name": policy_name,
-                "namespace": namespace,
-            },
+            "metadata": build_metadata(
+                name=policy_name,
+                namespace=namespace,
+                source_policy=name_override or policy.name,
+                resource_type="exclusion_policy",
+            ),
             "spec": {
                 "waf_exclusion_rules": exclusion_rules,
             },
