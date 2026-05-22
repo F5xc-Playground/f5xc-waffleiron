@@ -92,10 +92,10 @@ export interface AlarmOnlyViolation {
 }
 
 export interface TranslationOutputs {
-  app_firewall?: object;
-  exclusion_policy?: object;
-  service_policy?: object;
-  http_lb_patch?: object;
+  'app-firewall'?: object;
+  'waf-exclusion-policy'?: object;
+  'service-policy'?: object;
+  '_advisory:http_lb_patch'?: object;
 }
 
 export interface PushResult {

@@ -27,9 +27,9 @@ import {
 } from 'lucide-react';
 
 const PUSHABLE_TYPES: { key: keyof TranslationOutputs; label: string }[] = [
-  { key: 'app_firewall', label: 'App Firewall' },
-  { key: 'exclusion_policy', label: 'WAF Exclusion Policy' },
-  { key: 'service_policy', label: 'Service Policy' },
+  { key: 'app-firewall', label: 'App Firewall' },
+  { key: 'waf-exclusion-policy', label: 'WAF Exclusion Policy' },
+  { key: 'service-policy', label: 'Service Policy' },
 ];
 
 function getAvailableObjects(outputs: TranslationOutputs | null) {
@@ -281,7 +281,7 @@ export default function PushModal({ onClose }: PushModalProps) {
           </div>
 
           {/* HTTP LB Patch note */}
-          {state.outputs?.http_lb_patch && (
+          {state.outputs?.['_advisory:http_lb_patch'] && (
             <Alert>
               <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400" />
               <AlertTitle className="text-yellow-800 dark:text-yellow-300">
