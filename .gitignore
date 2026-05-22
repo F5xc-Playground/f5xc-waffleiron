@@ -1,12 +1,30 @@
+# Python
 __pycache__/
 *.pyc
-.env
 *.egg-info/
-dist/
-build/
 .venv/
 venv/
+uv.lock
+
+# Build
+dist/
+build/
+
+# Environment
+.env
+.env.*
+
+# OS
 .DS_Store
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# IDE / tools
+.claude/
+
+# Project-specific
 output/
-docs/superpowers/
 sample-policies/
+docs/superpowers/
