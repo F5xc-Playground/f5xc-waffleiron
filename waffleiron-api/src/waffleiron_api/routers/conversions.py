@@ -20,10 +20,14 @@ from waffleiron import (
 )
 from waffleiron.decisions import AlarmOnlyAction, SignatureDecision
 from waffleiron.model import AccuracyLevel, AsmPolicy, EnforcementMode
+from waffleiron.translators.utils import XC_RESOURCE_TYPES
 
 from waffleiron_api.sessions import SessionStore
 
 router = APIRouter(tags=["conversions"])
+
+_KIND_TO_ATTR = {info["kind"]: attr for attr, info in XC_RESOURCE_TYPES.items()}
+_KIND_TO_ATTR["_advisory:http_lb_patch"] = "http_lb_patch"
 
 
 # ── Dependency helpers ──────────────────────────────────────────────
@@ -80,7 +84,7 @@ def _apply_overrides(policy: AsmPolicy, overrides: dict) -> AsmPolicy:
 
 @router.post("/conversions", status_code=201)
 async def create_conversion(request: Request, file: UploadFile):
-    """Upload an ASM policy file (XML or JSON), parse it, and create a session."""
+    """Upload an AWAF policy file (XML or JSON), parse it, and create a session."""
     store = _get_store(request)
 
     content = await file.read()
@@ -125,7 +129,7 @@ async def get_conversion(request: Request, conversion_id: str):
 
 @router.get("/conversions/{conversion_id}/analysis")
 async def get_analysis(request: Request, conversion_id: str):
-    """Analyze the parsed ASM policy. Runs analysis lazily on first access."""
+    """Analyze the parsed AWAF policy. Runs analysis lazily on first access."""
     session = _get_session(request, conversion_id)
 
     if session.asm_policy is None:
@@ -224,7 +228,7 @@ async def submit_decisions(request: Request, conversion_id: str):
 
 @router.post("/conversions/{conversion_id}/translate")
 async def translate_conversion(request: Request, conversion_id: str):
-    """Translate the parsed ASM policy using submitted decisions."""
+    """Translate the parsed AWAF policy using submitted decisions."""
     session = _get_session(request, conversion_id)
     body = await request.json()
     name_override = body.get("name")
@@ -244,12 +248,16 @@ async def translate_conversion(request: Request, conversion_id: str):
     session.translation = result
     session.status = "translated"
 
-    # Build outputs dict — only include non-None results
+    # Build outputs dict keyed by XC resource type (kebab-case)
     outputs = {}
-    for attr in ("app_firewall", "exclusion_policy", "service_policy", "http_lb_patch"):
+    for attr in ("app_firewall", "exclusion_policy", "service_policy"):
         value = getattr(result, attr, None)
         if value is not None:
-            outputs[attr] = value
+            kind = XC_RESOURCE_TYPES[attr]["kind"]
+            outputs[kind] = value
+
+    if result.http_lb_patch is not None:
+        outputs["_advisory:http_lb_patch"] = result.http_lb_patch
 
     return {"id": session.id, "status": session.status, "outputs": outputs}
 
@@ -266,9 +274,11 @@ async def list_outputs(request: Request, conversion_id: str):
         raise HTTPException(status_code=400, detail="Translation not yet performed")
 
     available = []
-    for attr in ("app_firewall", "exclusion_policy", "service_policy", "http_lb_patch"):
+    for attr in ("app_firewall", "exclusion_policy", "service_policy"):
         if getattr(session.translation, attr, None) is not None:
-            available.append(attr)
+            available.append(XC_RESOURCE_TYPES[attr]["kind"])
+    if session.translation.http_lb_patch is not None:
+        available.append("_advisory:http_lb_patch")
 
     return {"available": available}
 
@@ -284,7 +294,9 @@ async def get_output(request: Request, conversion_id: str, object_type: str):
     if session.translation is None:
         raise HTTPException(status_code=400, detail="Translation not yet performed")
 
-    value = getattr(session.translation, object_type, None)
+    # Accept both kebab-case kinds and legacy underscore names
+    attr_name = _KIND_TO_ATTR.get(object_type, object_type)
+    value = getattr(session.translation, attr_name, None)
     if value is None:
         raise HTTPException(status_code=404, detail=f"Output '{object_type}' not available")
 
