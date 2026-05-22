@@ -38,6 +38,17 @@ class TestMetadata:
         with pytest.raises(ValueError, match="empty XC resource name"):
             AppFirewallTranslator.translate(minimal_policy, namespace="ns")
 
+    def test_metadata_has_all_xc_fields(self, minimal_policy):
+        result = AppFirewallTranslator.translate(minimal_policy, namespace="my-ns")
+        md = result["metadata"]
+        assert md["name"] == "test-policy-waf"
+        assert md["namespace"] == "my-ns"
+        assert md["annotations"] == {}
+        assert md["labels"] == {"ves.io/app_type": "waffleiron"}
+        assert md["disable"] is False
+        assert "description" in md
+        assert "WaffleIron" in md["description"]
+
 
 class TestEnforcementMode:
     def test_blocking_mode(self, minimal_policy):

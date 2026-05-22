@@ -9,7 +9,7 @@ from waffleiron.translators.mappings import (
     ASM_VIOLATION_TO_XC_VIOLATIONS,
     translate_blocking_page_vars,
 )
-from waffleiron.translators.utils import sanitize_xc_name
+from waffleiron.translators.utils import sanitize_xc_name, build_metadata
 
 _BOT_ACTION_MAP: dict[str, str] = {
     "block": "BLOCK",
@@ -73,10 +73,12 @@ class AppFirewallTranslator:
         policy_name = base + suffix
 
         return {
-            "metadata": {
-                "name": policy_name,
-                "namespace": namespace,
-            },
+            "metadata": build_metadata(
+                name=policy_name,
+                namespace=namespace,
+                source_policy=name_override or policy.name,
+                resource_type="app_firewall",
+            ),
             "spec": spec,
         }
 
